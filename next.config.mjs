@@ -20,7 +20,7 @@ const csp = [
   "font-src 'self' data:",
   "media-src 'self' blob: data:",
   "connect-src 'self' https://generativelanguage.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.googleapis.com https://accounts.google.com https://www.gstatic.com http://127.0.0.1:8000 http://localhost:8000",
-  "frame-src 'self' https://accounts.google.com https://apis.google.com https://www.gstatic.com",
+  "frame-src 'self' https://accounts.google.com https://apis.google.com https://www.gstatic.com https://soundcraft-ai-b6507.firebaseapp.com",
   "frame-ancestors 'none'",
   "form-action 'self'",
   "base-uri 'self'",
