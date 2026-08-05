@@ -9,7 +9,8 @@
       "installCommand": "npm install"
     },
     "python": {
-      "root": "services/python"
+      "root": "services/python",
+      "entrypoint": "main.py"
     }
   },
   "headers": [
