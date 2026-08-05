@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/session";
 
-// IMPORTANTE: NO incluir `export const runtime = 'edge'` 
-// para mantener compatibilidad con la estructura de servicios de Vercel.
+export const runtime = "nodejs";
 
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
