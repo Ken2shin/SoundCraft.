@@ -48,6 +48,7 @@ export default function AuthPanel({ mode }) {
     processedUid.current = null;
 
     if (!auth) {
+      setRedirecting(false);
       return undefined;
     }
 
@@ -69,7 +70,7 @@ export default function AuthPanel({ mode }) {
           throw new Error(body?.error || "No se pudo crear la sesión");
         }
 
-        const next = safeNext(sessionStorage.getItem("auth_next"));
+        const next = safeNext(sessionStorage.getItem("auth_next") || searchParams.get("next"));
         sessionStorage.removeItem("auth_next");
         router.replace(next);
         router.refresh();
@@ -78,6 +79,7 @@ export default function AuthPanel({ mode }) {
         if (!cancelled.current) {
           setError(err.message || "No se pudo crear la sesión");
           setLoading(false);
+          setRedirecting(false);
         }
       }
     };
@@ -87,23 +89,36 @@ export default function AuthPanel({ mode }) {
       void exchangeAndRedirect(user);
     });
 
+    let redirectDone = false;
+    const finishRedirect = () => {
+      if (redirectDone || cancelled.current) return;
+      redirectDone = true;
+      clearTimeout(redirectTimeout);
+      setRedirecting(false);
+    };
+
+    // Red para que la UI nunca quede colgada si Firebase no responde (CSP, red, etc.)
+    const redirectTimeout = setTimeout(finishRedirect, 12000);
+
     void getRedirectResult(auth)
       .then((result) => {
+        finishRedirect();
         if (result?.user) void exchangeAndRedirect(result.user);
       })
       .catch((err) => {
+        finishRedirect();
         if (!cancelled.current) {
           setError(firebaseError(err.code));
           setLoading(false);
-          setRedirecting(false);
         }
       });
 
     return () => {
       cancelled.current = true;
+      clearTimeout(redirectTimeout);
       unsubscribe();
     };
-  }, [router]);
+  }, [router, searchParams]);
 
   const handleGoogle = async () => {
     if (!auth || !isFirebaseConfigured) {
@@ -122,6 +137,7 @@ export default function AuthPanel({ mode }) {
     } catch (err) {
       setError(firebaseError(err.code));
       setLoading(false);
+      setRedirecting(false);
     }
   };
 

@@ -18,6 +18,7 @@ const firebaseCsp = [
   "font-src 'self' data:",
   "media-src 'self' blob: data:",
   "connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.googleapis.com https://*.firebaseapp.com https://*.googleusercontent.com https://accounts.google.com https://www.gstatic.com",
+  "child-src 'self' https://accounts.google.com https://apis.google.com https://www.gstatic.com https://*.firebaseapp.com",
   "frame-src 'self' https://accounts.google.com https://apis.google.com https://www.gstatic.com https://*.firebaseapp.com",
   "frame-ancestors 'none'",
   "form-action 'self'",
