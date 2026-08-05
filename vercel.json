@@ -1,18 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "services": {
-    "frontend": {
-      "root": ".",
-      "framework": "nextjs",
-      "buildCommand": "npm run build",
-      "devCommand": "npm run dev",
-      "installCommand": "npm install"
-    },
-    "python": {
-      "root": "services/python",
-      "entrypoint": "main.py"
-    }
-  },
   "headers": [
     {
       "source": "/_next/static/(.*)",
@@ -29,7 +16,7 @@
     {
       "source": "/favicon.ico",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        { "key": "Cache-Control", "value": "public, max-age=86400" }
       ]
     },
     {
@@ -49,15 +36,6 @@
       "headers": [
         { "key": "X-Content-Type-Options", "value": "nosniff" }
       ]
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/api/python(/.*)?",
-      "destination": {
-        "type": "service",
-        "service": "python"
-      }
     }
   ]
 }

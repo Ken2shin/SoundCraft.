@@ -1,12 +1,27 @@
 // Rate limiter en memoria (por proceso Node). Suficiente para una v1
 // monoinstancia; en producción con varios procesos usa Redis/Upstash.
 
-const buckets = new Map();
+const buckets = new Map<string, { count: number; resetAt: number }>();
 
 const DEFAULT_LIMIT = 10;
 const DEFAULT_WINDOW_MS = 60_000;
 
-export function rateLimit({ key, limit = DEFAULT_LIMIT, windowMs = DEFAULT_WINDOW_MS }) {
+export interface RateLimitOptions {
+  key?: string;
+  limit?: number;
+  windowMs?: number;
+}
+
+export interface RateLimitResult {
+  allowed: boolean;
+  retryAfter?: number;
+}
+
+export function rateLimit({
+  key,
+  limit = DEFAULT_LIMIT,
+  windowMs = DEFAULT_WINDOW_MS,
+}: RateLimitOptions): RateLimitResult {
   if (!key) return { allowed: true };
   const now = Date.now();
 

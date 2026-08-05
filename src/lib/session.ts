@@ -8,7 +8,13 @@ const SECRET = new TextEncoder().encode(
     "dev-only-insecure-secret-REPLACE-ME-in-.env-0123456789abcdef0123456789abcdef0123456789abcdef"
 );
 
-export async function createSessionToken(payload) {
+export interface SessionPayload {
+  uid: string;
+  email?: string | null;
+  name?: string | null;
+}
+
+export async function createSessionToken(payload: SessionPayload): Promise<string> {
   return new SignJWT({ ...payload })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -16,11 +22,18 @@ export async function createSessionToken(payload) {
     .sign(SECRET);
 }
 
-export async function verifySessionToken(token) {
+export async function verifySessionToken(
+  token: string | null | undefined
+): Promise<SessionPayload | null> {
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, SECRET);
-    return payload;
+    if (!payload.uid) return null;
+    return {
+      uid: String(payload.uid),
+      email: payload.email ? String(payload.email) : null,
+      name: payload.name ? String(payload.name) : null,
+    };
   } catch {
     return null;
   }
@@ -29,7 +42,7 @@ export async function verifySessionToken(token) {
 export function sessionCookieOptions() {
   return {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "lax" as const,
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: SESSION_MAX_AGE,

@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/session";
 
-export async function proxy(request) {
-  const { pathname } = request.nextUrl;
+export const runtime = "nodejs";
 
-  if (pathname.startsWith("/_next")) {
-    return NextResponse.next();
-  }
+export async function middleware(request) {
+  const { pathname } = request.nextUrl;
 
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   const session = token ? await verifySessionToken(token) : null;
@@ -21,7 +19,5 @@ export async function proxy(request) {
 }
 
 export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|api|auth|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|webp|ico|woff|woff2|css|js|map)$).*)",
-  ],
+  matcher: ["/dashboard/:path*"],
 };
