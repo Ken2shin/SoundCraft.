@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import PlansSection from "@/components/pricing/PlansSection";
 
+export const dynamic = "force-dynamic";
+
 const FEATURES = [
   {
     n: "01",
