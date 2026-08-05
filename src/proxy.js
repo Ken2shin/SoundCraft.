@@ -23,5 +23,8 @@ export async function proxy(request) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*"],
+  matcher: [
+    "/dashboard/:path*",
+    "/((?!_next|api|auth|_vercel|.*\\.(?:png|jpg|jpeg|svg|webp|ico|woff|woff2|css|js|map)$).*)",
+  ],
 };
