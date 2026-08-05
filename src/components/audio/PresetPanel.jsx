@@ -7,6 +7,11 @@ const ICONS = {
   bass: "♬",
   guitar: "♫",
   mic: "◍",
+  horn: "♯",
+  sax: "♭",
+  keyboard: "♩",
+  synth: "♫",
+  crowd: "◍",
 };
 
 export default function PresetPanel({ activeKey, onApply }) {

@@ -65,6 +65,10 @@ export default function Sidebar({ user }) {
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-bold text-emerald-600">
               <Sparkles className="h-3 w-3" /> PRO
             </span>
+          ) : user?.plan === "estudio" ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-bold text-emerald-600">
+              <Sparkles className="h-3 w-3" /> ESTUDIO
+            </span>
           ) : (
             <Link
               href="/planes"

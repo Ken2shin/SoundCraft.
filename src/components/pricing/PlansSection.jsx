@@ -4,21 +4,60 @@ import { useState } from "react";
 import { Check, Crown, X } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 
-const FREE_FEATURES = [
-  "Ecualizador de 3 bandas en tiempo real",
-  "Presets para Batería, Bajo, Guitarra y Voz",
-  "3 proyectos activos",
-  "Análisis de audio con IA (2 al día)",
-  "Reproductor y espectro de frecuencias",
+const PLANS = [
+  {
+    id: "free",
+    name: "Free",
+    tagline: "Para arrancar",
+    price: "0 €",
+    period: "/ para siempre",
+    badge: null,
+    features: [
+      "Ecualizador de 3 bandas en tiempo real",
+      "Presets para Batería, Bajo, Guitarra y Voz",
+      "Reproductor y espectro de frecuencias",
+      "Análisis de audio con IA",
+      "3 proyectos activos",
+    ],
+    highlight: false,
+  },
+  {
+    id: "estudio",
+    name: "Estudio",
+    tagline: "Para producir en serio",
+    price: "2,99 €",
+    period: "/ mes · sin permanencia",
+    badge: "Más popular",
+    features: [
+      "Todo lo del plan Free",
+      "10 proyectos activos",
+      "Análisis de IA ilimitado",
+      "Recomendaciones de EQ personalizadas",
+      "Exportación WAV",
+      "Acceso anticipado a nuevas funciones",
+    ],
+    highlight: true,
+  },
+  {
+    id: "pro",
+    name: "Pro",
+    tagline: "Para quienes exportan",
+    price: "4,99 €",
+    period: "/ mes · sin permanencia",
+    badge: "Profesional",
+    features: [
+      "Todo lo del plan Estudio",
+      "Proyectos ilimitados",
+      "Exportación HD (WAV 48 kHz)",
+      "Prioridad en el análisis de IA",
+      "Soporte prioritario",
+      "Etiquetas y organización avanzadas",
+    ],
+    highlight: false,
+  },
 ];
 
-const PRO_FEATURES = [
-  "Proyectos ilimitados",
-  "Exportación HD (WAV 48 kHz)",
-  "Análisis de IA ilimitado",
-  "Recomendaciones de EQ personalizadas",
-  "Acceso anticipado a nuevas funciones",
-];
+const CURRENT_BADGE = "Tu plan actual";
 
 function FeatureList({ items, accent }) {
   return (
@@ -39,13 +78,19 @@ function FeatureList({ items, accent }) {
   );
 }
 
-export default function PlansSection({ compact = false }) {
+export default function PlansSection({ compact = false, user = null }) {
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const currentPlan = user?.plan === "pro" ? "pro" : user?.plan === "estudio" ? "estudio" : "free";
+  const isLoggedIn = Boolean(user?.id || user?.email);
+
+  const freeCta = isLoggedIn
+    ? { href: "/dashboard", label: "Ir a mis proyectos" }
+    : { href: "/auth/signup", label: "Empezar gratis" };
 
   return (
     <section
       id="precios"
-      className={`mx-auto w-full max-w-5xl scroll-mt-24 ${compact ? "" : "py-24"}`}
+      className={`mx-auto w-full max-w-6xl scroll-mt-24 ${compact ? "" : "py-24"}`}
     >
       <div className="mb-12 text-center">
         <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.3em] text-[#58cc02]">
@@ -55,78 +100,93 @@ export default function PlansSection({ compact = false }) {
           Empieza en silencio. Sube el volumen cuando toque.
         </h2>
         <p className="mt-3 text-sm text-stone-500">
-          Todo el estudio funciona gratis. Pro es para cuando necesitas exportar en HD.
+          Todo el estudio funciona gratis. Estudio y Pro son para cuando necesitas exportar o producir más.
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Free */}
-        <div className="flex flex-col rounded-xl border border-[#3c3c3c]/12 bg-white p-8">
-          <div className="mb-6">
-            <p className="font-display text-lg font-semibold text-stone-100">Free</p>
-            <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.2em] text-stone-500">
-              Para aprender
-            </p>
-          </div>
-          <p className="mb-6 flex items-baseline gap-2">
-            <span className="font-display text-5xl font-semibold tracking-tight text-stone-50">0 €</span>
-            <span className="text-sm text-stone-500">/ para siempre</span>
-          </p>
-          <FeatureList items={FREE_FEATURES} accent={false} />
-          <Link
-            href="/auth/signup"
-            className="mt-auto rounded-md border border-[#3c3c3c]/15 py-2.5 text-center text-sm font-semibold text-stone-100 transition-colors hover:bg-[#3c3c3c]/[0.05]"
-          >
-            Empezar gratis
-          </Link>
-        </div>
+      <div className="grid gap-6 md:grid-cols-3">
+        {PLANS.map((plan) => {
+          const isCurrent = currentPlan === plan.id;
+          return (
+            <div
+              key={plan.id}
+              className={`relative flex flex-col rounded-xl border p-8 ${
+                plan.highlight
+                  ? "border-[#58cc02]/30 bg-gradient-to-b from-[#58cc02]/[0.08] to-transparent shadow-[0_0_60px_-30px_rgba(88,204,2,0.6)]"
+                  : "border-[#3c3c3c]/12 bg-white"
+              }`}
+            >
+              {(plan.badge || isCurrent) && (
+                <span
+                  className={`absolute -top-3 left-8 rounded-full px-3.5 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.2em] ${
+                    isCurrent
+                      ? "bg-indigo-500 text-white"
+                      : "bg-[#58cc02] text-[#ffffff]"
+                  }`}
+                >
+                  {isCurrent ? CURRENT_BADGE : plan.badge}
+                </span>
+              )}
 
-        {/* Pro */}
-        <div className="relative flex flex-col rounded-xl border border-[#58cc02]/30 bg-gradient-to-b from-[#58cc02]/[0.08] to-transparent p-8 shadow-[0_0_60px_-30px_rgba(88,204,2,0.6)]">
-          <span className="absolute -top-3 left-8 rounded-full bg-[#58cc02] px-3.5 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-[#ffffff]">
-            Más popular
-          </span>
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <p className="flex items-center gap-2 font-display text-lg font-semibold text-stone-100">
-                <Crown className="h-4 w-4 text-[#46a302]" />
-                Pro
+              <div className="mb-6 flex items-center justify-between">
+                <div>
+                  <p className="flex items-center gap-2 font-display text-lg font-semibold text-stone-100">
+                    <Crown className="h-4 w-4 text-[#46a302]" />
+                    {plan.name}
+                  </p>
+                  <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.2em] text-stone-500">
+                    {plan.tagline}
+                  </p>
+                </div>
+              </div>
+
+              <p className="mb-6 flex items-baseline gap-2">
+                <span className="font-display text-5xl font-semibold tracking-tight text-stone-50">{plan.price}</span>
+                <span className="text-sm text-stone-500">{plan.period}</span>
               </p>
-              <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.2em] text-stone-500">
-                Para quienes exportan
-              </p>
+
+              <FeatureList items={plan.features} accent={plan.highlight} />
+
+              {isCurrent ? (
+                <div className="mt-auto rounded-md border border-indigo-500/30 bg-indigo-500/10 py-2.5 text-center text-sm font-semibold text-indigo-400">
+                  Este es tu plan
+                </div>
+              ) : plan.id === "free" ? (
+                <Link
+                  href={freeCta.href}
+                  className="mt-auto rounded-md border border-[#3c3c3c]/15 py-2.5 text-center text-sm font-semibold text-stone-100 transition-colors hover:bg-[#3c3c3c]/[0.05]"
+                >
+                  {freeCta.label}
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setUpgradeOpen(true)}
+                  className={`mt-auto inline-flex items-center justify-center gap-2 rounded-md py-2.5 text-center text-sm font-bold text-[#ffffff] shadow-[0_0_30px_-10px_rgba(88,204,2,0.9)] transition-all hover:bg-[#46a302] ${
+                    plan.id === "pro" ? "bg-[#58cc02]" : "bg-[#46a302]"
+                  }`}
+                >
+                  Mejorar a {plan.name}
+                </button>
+              )}
             </div>
-            <span className="rounded-full border border-[#58cc02]/25 px-2.5 py-1 font-mono text-[9px] uppercase tracking-widest text-[#46a302]">
-              WAV 48 kHz
-            </span>
-          </div>
-          <p className="mb-6 flex items-baseline gap-2">
-            <span className="font-display text-5xl font-semibold tracking-tight text-stone-50">4,99 €</span>
-            <span className="text-sm text-stone-500">/ mes · sin permanencia</span>
-          </p>
-          <FeatureList items={PRO_FEATURES} accent />
-          <button
-            type="button"
-            onClick={() => setUpgradeOpen(true)}
-            className="mt-auto inline-flex items-center justify-center gap-2 rounded-md bg-[#58cc02] py-2.5 text-center text-sm font-bold text-[#ffffff] shadow-[0_0_30px_-10px_rgba(88,204,2,0.9)] transition-all hover:bg-[#46a302]"
-          >
-            Mejorar a Pro
-          </button>
-        </div>
+          );
+        })}
       </div>
 
       <p className="mt-8 text-center font-mono text-[10px] uppercase tracking-[0.25em] text-stone-600">
         Sin tarjeta para empezar · Cancelas cuando quieras
       </p>
 
-      <Modal open={upgradeOpen} title="Pro · Próximamente" onClose={() => setUpgradeOpen(false)}>
+      <Modal open={upgradeOpen} title="Pagos · Próximamente" onClose={() => setUpgradeOpen(false)}>
         <p className="text-sm leading-relaxed text-stone-300">
-          La integración de pagos está en desarrollo. El plan Pro de 4,99 €/mes habilitará la
-          exportación HD en cuanto esté disponible. Mientras tanto, sigue creando con el plan Free.
+          La integración de pagos está en desarrollo. Los planes Estudio y Pro habilitarán la
+          exportación y el análisis ilimitado en cuanto esté disponible. Mientras tanto, sigue
+          creando con tu plan actual.
         </p>
         <div className="mt-6 flex items-center justify-between">
           <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-stone-600">
-            4,99 €/mes · sin permanencia
+            2,99 € / 4,99 € por mes · sin permanencia
           </p>
           <button
             type="button"

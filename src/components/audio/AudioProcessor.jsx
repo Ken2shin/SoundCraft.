@@ -13,6 +13,7 @@ import {
   Save,
   Upload,
   Volume2,
+  X,
 } from "lucide-react";
 import { BANDS, DEFAULT_EQ, PRESETS } from "@/lib/audio/presets";
 import { downloadBlob, encodeWav } from "@/lib/audio/wav";
@@ -68,6 +69,8 @@ export default function AudioProcessor({
 }) {
   const playerRef = useRef(null);
   const eqRef = useRef(null);
+  const soloHpRef = useRef(null);
+  const soloLpRef = useRef(null);
   const analyserRef = useRef(null);
   const bufferRef = useRef(null);
   const audioFileRef = useRef(null);
@@ -89,6 +92,7 @@ export default function AudioProcessor({
   const [fileName, setFileName] = useState("");
   const [error, setError] = useState(null);
   const [analyser, setAnalyser] = useState(null);
+  const [soloing, setSoloing] = useState(false);
   const [peaks, setPeaks] = useState(null);
   const [audioFile, setAudioFile] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
@@ -140,10 +144,18 @@ export default function AudioProcessor({
       eqRef.current?.dispose();
     } catch {}
     try {
+      soloHpRef.current?.dispose();
+    } catch {}
+    try {
+      soloLpRef.current?.dispose();
+    } catch {}
+    try {
       analyserRef.current?.disconnect();
     } catch {}
     playerRef.current = null;
     eqRef.current = null;
+    soloHpRef.current = null;
+    soloLpRef.current = null;
     analyserRef.current = null;
   }, []);
 
@@ -178,12 +190,26 @@ export default function AudioProcessor({
           lowFrequency: 400,
           highFrequency: 2500,
         });
+        // Filtros de aislamiento por instrumento (paso-banda).
+        // Con paso en abierto (20 Hz – 20 kHz) no modifican el sonido.
+        const soloHp = new Tone.Filter({
+          type: "highpass",
+          frequency: 20,
+          Q: 0.6,
+        });
+        const soloLp = new Tone.Filter({
+          type: "lowpass",
+          frequency: 20000,
+          Q: 0.6,
+        });
         const analyser = ctx.rawContext.createAnalyser();
         analyser.fftSize = 2048;
         analyser.smoothingTimeConstant = 0.8;
 
         player.connect(eq);
-        eq.connect(analyser);
+        eq.connect(soloHp);
+        soloHp.connect(soloLp);
+        soloLp.connect(analyser);
         analyser.connect(ctx.rawContext.destination);
 
         player.loop = loopRef.current;
@@ -191,6 +217,8 @@ export default function AudioProcessor({
 
         playerRef.current = player;
         eqRef.current = eq;
+        soloHpRef.current = soloHp;
+        soloLpRef.current = soloLp;
         analyserRef.current = analyser;
         bufferRef.current = audioBuffer;
         audioFileRef.current = file;
@@ -203,6 +231,18 @@ export default function AudioProcessor({
         setCurrentTime(0);
         setPeaks(computePeaks(audioBuffer));
         setAnalyser(analyser);
+        if (soloHpRef.current && soloLpRef.current) {
+          const keepSolo = PRESETS[presetKey]?.range;
+          if (keepSolo) {
+            soloHpRef.current.frequency.value = keepSolo.low;
+            soloLpRef.current.frequency.value = keepSolo.high;
+            setSoloing(true);
+          } else {
+            soloHpRef.current.frequency.value = 20;
+            soloLpRef.current.frequency.value = 20000;
+            setSoloing(false);
+          }
+        }
         setIsLoaded(true);
         setIsPlaying(false);
       } catch (err) {
@@ -212,7 +252,7 @@ export default function AudioProcessor({
         setIsBusy(false);
       }
     },
-    [disposeGraph]
+    [disposeGraph, presetKey]
   );
 
   const togglePlay = useCallback(async () => {
@@ -266,6 +306,17 @@ export default function AudioProcessor({
     eqRef.current?.set(next);
     setEq(next);
     setPresetKey(key);
+    if (soloHpRef.current && soloLpRef.current) {
+      if (preset.range) {
+        soloHpRef.current.frequency.value = preset.range.low;
+        soloLpRef.current.frequency.value = preset.range.high;
+        setSoloing(true);
+      } else {
+        soloHpRef.current.frequency.value = 20;
+        soloLpRef.current.frequency.value = 20000;
+        setSoloing(false);
+      }
+    }
   }, []);
 
   const toggleLoop = useCallback(() => {
@@ -489,10 +540,29 @@ export default function AudioProcessor({
             ))}
           </div>
           <div className="mt-4">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-stone-500">
-              Presets por instrumento
-            </p>
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-wider text-stone-500">
+                Presets por instrumento
+              </p>
+              {soloing && (
+                <button
+                  type="button"
+                  onClick={() => applyPreset("Flat")}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-[#58cc02]/15 px-2.5 py-1 text-[11px] font-bold text-[#46a302] transition-colors hover:bg-[#58cc02]/25"
+                  title="Vuelve a escuchar la mezcla completa"
+                >
+                  <X className="h-3 w-3" />
+                  Solo: {PRESETS[presetKey]?.label || presetKey} · Cerrar
+                </button>
+              )}
+            </div>
             <PresetPanel activeKey={presetKey} onApply={applyPreset} />
+            {soloing && (
+              <p className="mt-2 text-xs text-stone-500">
+                Escuchando solo las frecuencias de {PRESETS[presetKey]?.label?.toLowerCase() || "ese instrumento"}.
+                Elige otro instrumento o la mezcla completa para volver.
+              </p>
+            )}
           </div>
         </div>
 

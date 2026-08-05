@@ -8,7 +8,7 @@ import {
 } from "@/lib/db/repo";
 import { rateLimit } from "@/lib/rate-limit";
 
-export const FREE_PROJECT_LIMIT = 3;
+export const PROJECT_LIMITS = { free: 3, studio: 10, pro: Infinity };
 
 export async function GET(request) {
   const session = await getRequestSession(request);
@@ -60,10 +60,12 @@ export async function POST(request) {
   try {
     const user = await ensureUser(session);
     const n = await countProjects(user.id);
-    if (user.plan !== "pro" && n >= FREE_PROJECT_LIMIT) {
+    const limit = PROJECT_LIMITS[user.plan] ?? PROJECT_LIMITS.free;
+    if (n >= limit) {
+      const planName = user.plan === "estudio" ? "Estudio" : user.plan === "pro" ? "Pro" : "Free";
       return NextResponse.json(
         {
-          error: `Límite del plan Free alcanzado (${FREE_PROJECT_LIMIT} proyectos). Actualízate a Pro.`,
+          error: `Límite del plan ${planName} alcanzado (${limit} proyectos). Actualízate a Estudio o Pro.`,
           code: "PLAN_LIMIT",
         },
         { status: 402 }

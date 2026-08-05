@@ -10,7 +10,8 @@ export default function Studio({ project, user }) {
   const [title, setTitle] = useState(project.title);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState(null);
-  const isPro = user?.plan === "pro";
+  const isPaid = user?.plan === "pro" || user?.plan === "estudio";
+  const planLabel = user?.plan === "pro" ? "Pro" : user?.plan === "estudio" ? "Estudio" : "Free";
 
   const eqState = project.eq_state || {};
   const initialEq = {
@@ -59,12 +60,12 @@ export default function Studio({ project, user }) {
           />
           <span
             className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
-              isPro
+              isPaid
                 ? "bg-emerald-500/15 text-emerald-600"
                 : "bg-indigo-500/15 text-indigo-600"
             }`}
           >
-            {isPro ? "Pro" : "Free"}
+            {planLabel}
           </span>
           <button
             type="button"
@@ -87,7 +88,7 @@ export default function Studio({ project, user }) {
             projectId={project.id}
             initialEq={initialEq}
             initialPresetKey={eqState.presetKey || "Flat"}
-            isPro={isPro}
+            isPro={isPaid}
             onSaveState={saveState}
           />
         </main>
