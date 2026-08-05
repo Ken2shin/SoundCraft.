@@ -14,12 +14,13 @@ const securityHeaders = {
 // scripts/style inline y WebSocket de HMR.
 const csp = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' blob: data:",
+  "img-src 'self' blob: data: https://*.googleusercontent.com https://www.gstatic.com",
   "font-src 'self' data:",
   "media-src 'self' blob: data:",
-  "connect-src 'self' https://generativelanguage.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.googleapis.com http://127.0.0.1:8000 http://localhost:8000",
+  "connect-src 'self' https://generativelanguage.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.googleapis.com https://accounts.google.com https://www.gstatic.com http://127.0.0.1:8000 http://localhost:8000",
+  "frame-src 'self' https://accounts.google.com https://apis.google.com https://www.gstatic.com",
   "frame-ancestors 'none'",
   "form-action 'self'",
   "base-uri 'self'",

@@ -27,12 +27,6 @@ function firebaseError(code) {
 let redirectChecked = false;
 let sessionHandled = false;
 
-function clientLog(msg) {
-  try {
-    fetch(`/api/auth/debug?msg=${encodeURIComponent(msg)}`, { method: "GET" });
-  } catch {}
-}
-
 export default function AuthPanel({ mode }) {
   const isSignup = mode === "signup";
   const router = useRouter();
@@ -42,15 +36,12 @@ export default function AuthPanel({ mode }) {
   const [loading, setLoading] = useState(false);
 
   const exchangeAndRedirect = async (credential) => {
-    clientLog("exchange: getIdToken");
     const token = await getIdToken(credential.user);
-    clientLog(`exchange: token len=${token.length}`);
     const res = await fetch("/api/auth/token", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ idToken: token }),
     });
-    clientLog(`exchange: POST status=${res.status}`);
     if (!res.ok) throw new Error("No se pudo crear la sesión");
     const next = sessionStorage.getItem("auth_next") || "/dashboard";
     sessionStorage.removeItem("auth_next");
@@ -61,40 +52,32 @@ export default function AuthPanel({ mode }) {
   // Al volver del redirect de Google, completa el intercambio de token.
   useEffect(() => {
     if (!auth) {
-      clientLog("mount: firebase NO configurado");
       return;
     }
     if (redirectChecked) {
-      clientLog("mount: ya revisado (StrictMode 2º)");
       return;
     }
     redirectChecked = true;
-    clientLog("mount: revisando redirect");
     let cancelled = false;
 
     const handleUser = async (user) => {
       if (!user || cancelled || sessionHandled) {
-        clientLog(`handleUser skip: user=${!!user} cancelled=${cancelled} handled=${sessionHandled}`);
         return;
       }
       sessionHandled = true;
-      clientLog(`handleUser: usuario ${user.email || user.uid}`);
       try {
         await exchangeAndRedirect({ user });
       } catch (err) {
         sessionHandled = false;
         setError(err.message || "No se pudo crear la sesión");
-        clientLog(`handleUser error: ${err.message}`);
       }
     };
 
     getRedirectResult(auth)
       .then((credential) => {
-        clientLog(`getRedirectResult: ${credential ? "CRED" : "null"}`);
         if (credential) return handleUser(credential.user);
       })
       .catch((err) => {
-        clientLog(`getRedirectResult error: ${err.code} ${err.message}`);
         const msg = firebaseError(err.code);
         if (msg) setError(msg);
       })
@@ -105,7 +88,6 @@ export default function AuthPanel({ mode }) {
     // Fallback: si el resultado del redirect se pierde (StrictMode, cierre de
     // pestaña, etc.), la sesión persistida de Firebase sigue teniendo al usuario.
     const unsub = onAuthStateChanged(auth, (user) => {
-      clientLog(`onAuthStateChanged: ${user ? user.email || user.uid : "null"}`);
       handleUser(user);
     });
 
@@ -126,11 +108,8 @@ export default function AuthPanel({ mode }) {
     try {
       const n = new URLSearchParams(window.location.search).get("next");
       if (n) sessionStorage.setItem("auth_next", n);
-      clientLog("click: signInWithRedirect lanzado");
       await signInWithRedirect(auth, new GoogleAuthProvider());
-      clientLog("click: signInWithRedirect resolvio");
     } catch (err) {
-      clientLog(`click error: ${err.code} ${err.message}`);
       const msg = firebaseError(err.code);
       if (msg) setError(msg);
       setLoading(false);
