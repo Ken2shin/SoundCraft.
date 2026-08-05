@@ -65,6 +65,16 @@
         "type": "service",
         "service": "python"
       }
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/",
+      "has": [
+        {
+          "type": "query",
+          "key": "psc"
+        }
+      ]
     }
   ]
 }
