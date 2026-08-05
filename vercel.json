@@ -4,12 +4,37 @@
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
+  "services": {
+    "frontend": {
+      "root": ".",
+      "framework": "nextjs"
+    },
+    "python": {
+      "root": "services/python"
+    }
+  },
   "headers": [
     {
       "source": "/api/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "no-store" }
       ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/python(/.*)?",
+      "destination": {
+        "type": "service",
+        "service": "python"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "type": "service",
+        "service": "frontend"
+      }
     }
   ]
 }
