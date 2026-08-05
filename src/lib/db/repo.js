@@ -1,26 +1,47 @@
 import "server-only";
 import { query } from "@/lib/db";
 
-const USER_COLS = "id, firebase_uid, email, name, plan, is_admin, created_at";
+const USER_COLS = "id, email, name, plan, is_admin, created_at";
 
-export async function ensureUser({ uid, email, name }) {
+export async function createUser({ email, name, passwordHash }) {
   const res = await query(
-    `INSERT INTO users (firebase_uid, email, name)
+    `INSERT INTO users (email, name, password_hash)
      VALUES ($1, $2, $3)
-     ON CONFLICT (firebase_uid)
-     DO UPDATE SET email = EXCLUDED.email, name = COALESCE(EXCLUDED.name, users.name)
      RETURNING ${USER_COLS}`,
-    [uid, email || null, name || null]
+    [email, name || null, passwordHash]
   );
   return res.rows[0];
 }
 
+export async function getUserByEmail(email) {
+  const res = await query(
+    `SELECT ${USER_COLS}, password_hash FROM users WHERE email = $1`,
+    [email]
+  );
+  return res.rows[0] || null;
+}
+
 export async function getUserByUid(uid) {
   const res = await query(
-    `SELECT ${USER_COLS} FROM users WHERE firebase_uid = $1`,
+    `SELECT ${USER_COLS} FROM users WHERE id = $1`,
     [uid]
   );
   return res.rows[0] || null;
+}
+
+export async function ensureUser({ uid, email, name }) {
+  const existing = await getUserByUid(uid);
+  if (existing) return existing;
+  const res = await query(
+    `INSERT INTO users (id, email, name)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (id)
+     DO UPDATE SET email = COALESCE(EXCLUDED.email, users.email),
+                   name = COALESCE(EXCLUDED.name, users.name)
+     RETURNING ${USER_COLS}`,
+    [uid, email || null, name || null]
+  );
+  return res.rows[0];
 }
 
 export async function listProjects(dbUserId) {

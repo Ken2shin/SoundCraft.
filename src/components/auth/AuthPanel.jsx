@@ -1,30 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AudioWaveform, Loader2, TriangleAlert } from "lucide-react";
-import {
-  auth,
-  getRedirectResult,
-  GoogleAuthProvider,
-  isFirebaseConfigured,
-  onAuthStateChanged,
-  persistenceReady,
-  signInWithRedirect,
-} from "@/lib/firebase-client";
-import { getIdToken } from "firebase/auth";
-
-function firebaseError(code) {
-  const map = {
-    "auth/unauthorized-domain":
-      "El dominio no está autorizado en Firebase (Authentication > Settings > Authorized domains).",
-    "auth/account-exists-with-different-credential":
-      "Ya existe una cuenta con este correo usando otro método de inicio de sesión.",
-    "auth/popup-blocked": "El navegador bloqueó la ventana de Google. Permite ventanas emergentes e inténtalo otra vez.",
-    "auth/network-request-failed": "No se pudo conectar con Firebase. Revisa tu conexión e inténtalo otra vez.",
-  };
-  return map[code] || "Ocurrió un error al iniciar sesión. Inténtalo de nuevo.";
-}
+import { AudioWaveform, Loader2 } from "lucide-react";
 
 function safeNext(value) {
   if (!value || !value.startsWith("/") || value.startsWith("//")) {
@@ -37,107 +15,42 @@ export default function AuthPanel({ mode }) {
   const isSignup = mode === "signup";
   const router = useRouter();
   const searchParams = useSearchParams();
-  const processedUid = useRef(null);
-  const cancelled = useRef(false);
+
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [redirecting, setRedirecting] = useState(isFirebaseConfigured);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    cancelled.current = false;
-    processedUid.current = null;
-
-    if (!auth) {
-      setRedirecting(false);
-      return undefined;
-    }
-
-    const exchangeAndRedirect = async (user) => {
-      if (!user || cancelled.current || processedUid.current === user.uid) return;
-      processedUid.current = user.uid;
-      setError("");
-
-      try {
-        const idToken = await getIdToken(user, true);
-        const response = await fetch("/api/auth/token", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "same-origin",
-          body: JSON.stringify({ idToken }),
-        });
-        if (!response.ok) {
-          const body = await response.json().catch(() => null);
-          throw new Error(body?.error || "No se pudo crear la sesión");
-        }
-
-        const next = safeNext(sessionStorage.getItem("auth_next") || searchParams.get("next"));
-        sessionStorage.removeItem("auth_next");
-        router.replace(next);
-        router.refresh();
-      } catch (err) {
-        processedUid.current = null;
-        if (!cancelled.current) {
-          setError(err.message || "No se pudo crear la sesión");
-          setLoading(false);
-          setRedirecting(false);
-        }
-      }
-    };
-
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setRedirecting(false);
-      void exchangeAndRedirect(user);
-    });
-
-    let redirectDone = false;
-    const finishRedirect = () => {
-      if (redirectDone || cancelled.current) return;
-      redirectDone = true;
-      clearTimeout(redirectTimeout);
-      setRedirecting(false);
-    };
-
-    // Red para que la UI nunca quede colgada si Firebase no responde (CSP, red, etc.)
-    const redirectTimeout = setTimeout(finishRedirect, 12000);
-
-    void getRedirectResult(auth)
-      .then((result) => {
-        finishRedirect();
-        if (result?.user) void exchangeAndRedirect(result.user);
-      })
-      .catch((err) => {
-        finishRedirect();
-        if (!cancelled.current) {
-          setError(firebaseError(err.code));
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled.current = true;
-      clearTimeout(redirectTimeout);
-      unsubscribe();
-    };
-  }, [router, searchParams]);
-
-  const handleGoogle = async () => {
-    if (!auth || !isFirebaseConfigured) {
-      setError("Firebase no está configurado. Revisa las variables NEXT_PUBLIC_FIREBASE_*.");
-      return;
-    }
-
-    setLoading(true);
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setError("");
-    const next = safeNext(searchParams.get("next"));
-    sessionStorage.setItem("auth_next", next);
+    setLoading(true);
+
+    const endpoint = isSignup ? "/api/auth/register" : "/api/auth/login";
+    const body = { email, password };
+    if (isSignup) body.name = name;
 
     try {
-      await persistenceReady;
-      await signInWithRedirect(auth, new GoogleAuthProvider());
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify(body),
+      });
+
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.error || "No se pudo completar la solicitud");
+      }
+
+      const next = safeNext(searchParams.get("next"));
+      sessionStorage.removeItem("auth_next");
+      router.replace(next);
+      router.refresh();
     } catch (err) {
-      setError(firebaseError(err.code));
+      setError(err.message || "Ocurrió un error. Inténtalo de nuevo.");
       setLoading(false);
-      setRedirecting(false);
     }
   };
 
@@ -155,26 +68,73 @@ export default function AuthPanel({ mode }) {
         </p>
       </div>
 
-      {!isFirebaseConfigured && (
-        <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-xs text-amber-600">
-          <span className="flex items-center gap-2">
-            <TriangleAlert className="h-4 w-4 shrink-0" />
-            Faltan las credenciales de Firebase. Configura las variables NEXT_PUBLIC_FIREBASE_*.
-          </span>
-        </div>
+      {error && (
+        <p className="mb-4 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-600">
+          {error}
+        </p>
       )}
 
-      {error && <p className="mb-4 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-600">{error}</p>}
+      <form onSubmit={handleSubmit} className="space-y-3">
+        {isSignup && (
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-stone-400">Nombre</span>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              maxLength={80}
+              autoComplete="name"
+              placeholder="Tu nombre"
+              className="w-full rounded-lg border border-[#3c3c3c]/15 bg-[#1c1c1c] px-3 py-2.5 text-sm text-stone-100 outline-none placeholder:text-stone-500 focus:border-[#58cc02]"
+            />
+          </label>
+        )}
 
-      <button
-        type="button"
-        onClick={handleGoogle}
-        disabled={loading || redirecting || !isFirebaseConfigured}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[#3c3c3c]/15 py-2.5 text-sm font-semibold text-stone-100 transition-colors hover:bg-[#3c3c3c]/5 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {loading || redirecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <span className="text-base font-bold">G</span>}
-        {redirecting ? "Completando inicio de sesión…" : loading ? "Redirigiendo a Google…" : "Continuar con Google"}
-      </button>
+        <label className="block">
+          <span className="mb-1 block text-xs font-semibold text-stone-400">Correo electrónico</span>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            autoComplete="email"
+            placeholder="tucorreo@ejemplo.com"
+            className="w-full rounded-lg border border-[#3c3c3c]/15 bg-[#1c1c1c] px-3 py-2.5 text-sm text-stone-100 placeholder:text-stone-500 focus:border-[#58cc02]"
+          />
+        </label>
+
+        <label className="block">
+          <span className="mb-1 block text-xs font-semibold text-stone-400">Contraseña</span>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={8}
+            autoComplete={isSignup ? "new-password" : "current-password"}
+            placeholder={isSignup ? "Mínimo 8 caracteres" : "Tu contraseña"}
+            className="w-full rounded-lg border border-[#3c3c3c]/15 bg-[#1c1c1c] px-3 py-2.5 text-sm text-stone-100 placeholder:text-stone-500 focus:border-[#58cc02]"
+          />
+        </label>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="mt-1 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#58cc02] py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              {isSignup ? "Creando tu cuenta…" : "Iniciando sesión…"}
+            </>
+          ) : isSignup ? (
+            "Crear cuenta"
+          ) : (
+            "Iniciar sesión"
+          )}
+        </button>
+      </form>
     </div>
   );
 }

@@ -55,7 +55,7 @@ const FEATURES = [
     n: "06",
     icon: ShieldCheck,
     title: "Cuenta segura",
-    desc: "Autenticación con Firebase Auth y sesiones firmadas con JWT en cookie HttpOnly.",
+    desc: "Cuentas con correo y contraseña y sesiones firmadas con JWT en cookie HttpOnly.",
   },
 ];
 

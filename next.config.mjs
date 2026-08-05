@@ -10,16 +10,14 @@ const securityHeaders = [
   { key: "Permissions-Policy", value: "camera=(), geolocation=(), payment=()" },
 ];
 
-const firebaseCsp = [
+const securityCsp = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com",
+  "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://*.googleusercontent.com https://www.gstatic.com",
+  "img-src 'self' data: blob:",
   "font-src 'self' data:",
   "media-src 'self' blob: data:",
-  "connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.googleapis.com https://*.firebaseapp.com https://*.googleusercontent.com https://accounts.google.com https://www.gstatic.com",
-  "child-src 'self' https://accounts.google.com https://apis.google.com https://www.gstatic.com https://*.firebaseapp.com",
-  "frame-src 'self' https://accounts.google.com https://apis.google.com https://www.gstatic.com https://*.firebaseapp.com",
+  "connect-src 'self'",
   "frame-ancestors 'none'",
   "form-action 'self'",
   "base-uri 'self'",
@@ -38,7 +36,7 @@ const nextConfig = {
         headers: [
           ...securityHeaders,
           ...(isProduction
-            ? [{ key: "Content-Security-Policy", value: firebaseCsp }]
+            ? [{ key: "Content-Security-Policy", value: securityCsp }]
             : []),
           { key: "Cache-Control", value: "no-store, must-revalidate" },
         ],
