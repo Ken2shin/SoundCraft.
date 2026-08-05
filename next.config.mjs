@@ -40,7 +40,9 @@ const nextConfig = {
       : [];
     return [
       {
-        source: "/:path*",
+        // Excluye assets estáticos de Next.js y archivos públicos del CSP
+        // Vercel maneja cache de estos via vercel.json headers
+        source: "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:png|jpg|jpeg|svg|webp|ico|woff|woff2)$).*)",
         headers: [
           ...Object.entries(securityHeaders).map(([key, value]) => ({
             key,
