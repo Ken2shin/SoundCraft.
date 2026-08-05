@@ -3,7 +3,16 @@ import { SESSION_COOKIE, verifySessionToken } from "@/lib/session";
 
 // Protege el dashboard y el estudio. El resto de la app es público.
 export async function proxy(request) {
-  const { pathname } = request.nextUrl;
+  const { pathname, searchParams } = request.nextUrl;
+
+  // Skip RSC requests (React Server Components payload) and Next.js prefetches
+  // These are internal requests that must be fast and don't need auth
+  const isRSC = request.headers.get("RSC") === "1" || searchParams.has("_rsc");
+  const isPrefetch = request.headers.get("Next-Router-Prefetch") === "1" ||
+    request.headers.get("Purpose") === "prefetch";
+  if (isRSC || isPrefetch) {
+    return NextResponse.next();
+  }
 
   const sessionCookie = request.cookies.get(SESSION_COOKIE);
   const session = sessionCookie
