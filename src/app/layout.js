@@ -1,6 +1,7 @@
 import { IBM_Plex_Mono, Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import BuildIdWatcher from "@/components/BuildIdWatcher";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -44,8 +45,10 @@ export default function RootLayout({ children }) {
       className={`${inter.variable} ${spaceGrotesk.variable} ${ibmPlexMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-surface text-stone-200">
-        {children}
-        <BuildIdWatcher />
+        <ErrorBoundary>
+          {children}
+          <BuildIdWatcher />
+        </ErrorBoundary>
       </body>
     </html>
   );
