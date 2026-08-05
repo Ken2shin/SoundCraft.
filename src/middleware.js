@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/session";
 
+// IMPORTANTE: NO incluir `export const runtime = 'edge'` 
+// para mantener compatibilidad con la estructura de servicios de Vercel.
+
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
   
-  // 1. Dejar pasar peticiones internas de Next.js y Server Components inmediatamente
+  // 1. Dejar pasar peticiones internas de Next.js y React Server Components inmediatamente
   const isInternalRequest =
     request.headers.get("RSC") === "1" ||
     request.headers.get("Next-Router-Prefetch") === "1" ||
@@ -26,20 +29,12 @@ export async function middleware(request) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Dejar que la petición continúe normalmente si no requiere bloqueo
   return NextResponse.next();
 }
 
-// 4. Matcher estricto: Evita que el middleware se ejecute en archivos estáticos o API
+// 4. Matcher estricto para ignorar archivos estáticos, imágenes y librerías
 export const config = {
   matcher: [
-    /*
-     * Aplica el middleware a todas las rutas excepto:
-     * - API routes (/api/*)
-     * - Auth routes (/auth/*)
-     * - Next.js internals (/_next/*)
-     * - Archivos estáticos (imágenes, fuentes, css, js, favicon)
-     */
     "/((?!_next/static|_next/image|api|auth|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|webp|ico|woff|woff2|css|js|map)$).*)"
   ],
 };
