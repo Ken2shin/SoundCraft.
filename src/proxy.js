@@ -1,39 +1,27 @@
 import { NextResponse } from "next/server";
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/session";
 
-// Protege el dashboard y el estudio. El resto de la app es público.
 export async function proxy(request) {
-  const { pathname, searchParams } = request.nextUrl;
-
-  // Skip RSC requests (React Server Components payload) and Next.js prefetches
-  // These are internal requests that must be fast and don't need auth
-  const isRSC = request.headers.get("RSC") === "1" || searchParams.has("_rsc");
-  const isPrefetch = request.headers.get("Next-Router-Prefetch") === "1" ||
+  const { pathname } = request.nextUrl;
+  const isInternalRequest =
+    request.headers.get("RSC") === "1" ||
+    request.headers.get("Next-Router-Prefetch") === "1" ||
     request.headers.get("Purpose") === "prefetch";
-  if (isRSC || isPrefetch) {
-    return NextResponse.next();
-  }
 
-  const sessionCookie = request.cookies.get(SESSION_COOKIE);
-  const session = sessionCookie
-    ? await verifySessionToken(sessionCookie.value)
-    : null;
+  if (isInternalRequest) return NextResponse.next();
 
-  if (pathname.startsWith("/dashboard") && !session) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/auth/login";
-    url.searchParams.set("next", pathname);
-    if (sessionCookie) url.searchParams.set("why", "session-invalid");
-    return NextResponse.redirect(url);
+  const token = request.cookies.get(SESSION_COOKIE)?.value;
+  const session = token ? await verifySessionToken(token) : null;
+
+  if (pathname.startsWith("/dashboard") && !session?.uid) {
+    const loginUrl = new URL("/auth/login", request.url);
+    loginUrl.searchParams.set("next", pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    // Solo corre en el dashboard (evita pasarse por api/_next/static/assets)
-    "/dashboard/:path*",
-    "/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:png|jpg|jpeg|svg|webp|ico)$).*)",
-  ],
+  matcher: ["/dashboard/:path*"],
 };

@@ -65,13 +65,6 @@
         "type": "service",
         "service": "python"
       }
-    },
-    {
-      "source": "/(.*)",
-      "destination": {
-        "type": "service",
-        "service": "frontend"
-      }
     }
   ]
 }

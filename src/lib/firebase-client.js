@@ -1,4 +1,5 @@
 "use client";
+
 import { getApps, initializeApp } from "firebase/app";
 import {
   browserLocalPersistence,
@@ -20,16 +21,25 @@ const firebaseConfig = {
 };
 
 export const isFirebaseConfigured = Boolean(
-  firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId
+  firebaseConfig.apiKey &&
+    firebaseConfig.authDomain &&
+    firebaseConfig.projectId &&
+    firebaseConfig.appId
 );
 
-if (isFirebaseConfigured) {
-  const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  setPersistence(auth, browserLocalPersistence).catch(() => {});
-}
+const app = isFirebaseConfigured
+  ? getApps().length
+    ? getApps()[0]
+    : initializeApp(firebaseConfig)
+  : null;
 
-export const auth = isFirebaseConfigured ? getAuth(getApps()[0]) : null;
+export const auth = app ? getAuth(app) : null;
+export const persistenceReady = auth
+  ? setPersistence(auth, browserLocalPersistence).catch((error) => {
+      console.warn("[firebase] No se pudo activar la persistencia local", error);
+      return undefined;
+    })
+  : Promise.resolve();
 
 export {
   getRedirectResult,

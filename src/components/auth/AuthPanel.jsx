@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+
+import { useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AudioWaveform, Loader2, TriangleAlert } from "lucide-react";
 import {
   auth,
@@ -8,6 +9,7 @@ import {
   GoogleAuthProvider,
   isFirebaseConfigured,
   onAuthStateChanged,
+  persistenceReady,
   signInWithRedirect,
 } from "@/lib/firebase-client";
 import { getIdToken } from "firebase/auth";
@@ -18,100 +20,107 @@ function firebaseError(code) {
       "El dominio no está autorizado en Firebase (Authentication > Settings > Authorized domains).",
     "auth/account-exists-with-different-credential":
       "Ya existe una cuenta con este correo usando otro método de inicio de sesión.",
+    "auth/popup-blocked": "El navegador bloqueó la ventana de Google. Permite ventanas emergentes e inténtalo otra vez.",
+    "auth/network-request-failed": "No se pudo conectar con Firebase. Revisa tu conexión e inténtalo otra vez.",
   };
-  return map[code] || "Ocurrió un error. Inténtalo de nuevo.";
+  return map[code] || "Ocurrió un error al iniciar sesión. Inténtalo de nuevo.";
 }
 
-// Guard de módulo: en dev React StrictMode monta el componente dos veces y
-// getRedirectResult consume el resultado del redirect en la primera llamada.
-let redirectChecked = false;
-let sessionHandled = false;
+function safeNext(value) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return "/dashboard";
+  }
+  return value;
+}
 
 export default function AuthPanel({ mode }) {
   const isSignup = mode === "signup";
   const router = useRouter();
-
+  const searchParams = useSearchParams();
+  const processedUid = useRef(null);
+  const cancelled = useRef(false);
   const [error, setError] = useState("");
-  const [redirecting, setRedirecting] = useState(true);
+  const [redirecting, setRedirecting] = useState(isFirebaseConfigured);
   const [loading, setLoading] = useState(false);
 
-  const exchangeAndRedirect = async (credential) => {
-    const token = await getIdToken(credential.user);
-    const res = await fetch("/api/auth/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idToken: token }),
-    });
-    if (!res.ok) throw new Error("No se pudo crear la sesión");
-    const next = sessionStorage.getItem("auth_next") || "/dashboard";
-    sessionStorage.removeItem("auth_next");
-    router.push(next);
-    router.refresh();
-  };
-
-  // Al volver del redirect de Google, completa el intercambio de token.
   useEffect(() => {
-    if (!auth) {
-      return;
-    }
-    if (redirectChecked) {
-      return;
-    }
-    redirectChecked = true;
-    let cancelled = false;
+    cancelled.current = false;
+    processedUid.current = null;
 
-    const handleUser = async (user) => {
-      if (!user || cancelled || sessionHandled) {
-        return;
-      }
-      sessionHandled = true;
+    if (!auth) {
+      return undefined;
+    }
+
+    const exchangeAndRedirect = async (user) => {
+      if (!user || cancelled.current || processedUid.current === user.uid) return;
+      processedUid.current = user.uid;
+      setError("");
+
       try {
-        await exchangeAndRedirect({ user });
+        const idToken = await getIdToken(user, true);
+        const response = await fetch("/api/auth/token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ idToken }),
+        });
+        if (!response.ok) {
+          const body = await response.json().catch(() => null);
+          throw new Error(body?.error || "No se pudo crear la sesión");
+        }
+
+        const next = safeNext(sessionStorage.getItem("auth_next"));
+        sessionStorage.removeItem("auth_next");
+        router.replace(next);
+        router.refresh();
       } catch (err) {
-        sessionHandled = false;
-        setError(err.message || "No se pudo crear la sesión");
+        processedUid.current = null;
+        if (!cancelled.current) {
+          setError(err.message || "No se pudo crear la sesión");
+          setLoading(false);
+        }
       }
     };
 
-    getRedirectResult(auth)
-      .then((credential) => {
-        if (credential) return handleUser(credential.user);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setRedirecting(false);
+      void exchangeAndRedirect(user);
+    });
+
+    void getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) void exchangeAndRedirect(result.user);
       })
       .catch((err) => {
-        const msg = firebaseError(err.code);
-        if (msg) setError(msg);
-      })
-      .finally(() => {
-        if (!cancelled) setRedirecting(false);
+        if (!cancelled.current) {
+          setError(firebaseError(err.code));
+          setLoading(false);
+          setRedirecting(false);
+        }
       });
 
-    // Fallback: si el resultado del redirect se pierde (StrictMode, cierre de
-    // pestaña, etc.), la sesión persistida de Firebase sigue teniendo al usuario.
-    const unsub = onAuthStateChanged(auth, (user) => {
-      handleUser(user);
-    });
-
     return () => {
-      cancelled = true;
-      unsub();
+      cancelled.current = true;
+      unsubscribe();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [router]);
 
   const handleGoogle = async () => {
-    if (!auth) {
-      setError("Firebase no está configurado. Revisa tu archivo .env");
+    if (!auth || !isFirebaseConfigured) {
+      setError("Firebase no está configurado. Revisa las variables NEXT_PUBLIC_FIREBASE_*.");
       return;
     }
+
     setLoading(true);
     setError("");
+    const next = safeNext(searchParams.get("next"));
+    sessionStorage.setItem("auth_next", next);
+
     try {
-      const n = new URLSearchParams(window.location.search).get("next");
-      if (n) sessionStorage.setItem("auth_next", n);
+      await persistenceReady;
       await signInWithRedirect(auth, new GoogleAuthProvider());
     } catch (err) {
-      const msg = firebaseError(err.code);
-      if (msg) setError(msg);
+      setError(firebaseError(err.code));
       setLoading(false);
     }
   };
@@ -126,9 +135,7 @@ export default function AuthPanel({ mode }) {
           {isSignup ? "Crea tu cuenta" : "Bienvenido de nuevo"}
         </h1>
         <p className="mt-1 text-sm text-stone-400">
-          {isSignup
-            ? "Empieza a producir gratis con SoundCraft AI"
-            : "Inicia sesión en tu estudio"}
+          {isSignup ? "Empieza a producir gratis con SoundCraft AI" : "Inicia sesión en tu estudio"}
         </p>
       </div>
 
@@ -136,18 +143,12 @@ export default function AuthPanel({ mode }) {
         <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-xs text-amber-600">
           <span className="flex items-center gap-2">
             <TriangleAlert className="h-4 w-4 shrink-0" />
-            Faltan tus credenciales de Firebase. Completa las variables{" "}
-            <code className="font-mono">NEXT_PUBLIC_FIREBASE_*</code> en tu archivo{" "}
-            <code className="font-mono">.env</code>, reinicia el servidor y vuelve aquí.
+            Faltan las credenciales de Firebase. Configura las variables NEXT_PUBLIC_FIREBASE_*.
           </span>
         </div>
       )}
 
-      {error && (
-        <p className="mb-4 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-600">
-          {error}
-        </p>
-      )}
+      {error && <p className="mb-4 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-600">{error}</p>}
 
       <button
         type="button"
@@ -155,35 +156,8 @@ export default function AuthPanel({ mode }) {
         disabled={loading || redirecting || !isFirebaseConfigured}
         className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[#3c3c3c]/15 py-2.5 text-sm font-semibold text-stone-100 transition-colors hover:bg-[#3c3c3c]/5 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {loading || redirecting ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <svg className="h-4 w-4" viewBox="0 0 48 48" aria-hidden="true">
-            <path
-              fill="#FFC107"
-              d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"
-            />
-            <path
-              fill="#FF3D00"
-              d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"
-            />
-            <path
-              fill="#4CAF50"
-              d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"
-            />
-            <path
-              fill="#1976D2"
-              d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"
-            />
-          </svg>
-        )}
-        {redirecting ? (
-          "Completando inicio de sesión…"
-        ) : loading ? (
-          "Redirigiendo a Google…"
-        ) : (
-          "Continuar con Google"
-        )}
+        {loading || redirecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <span className="text-base font-bold">G</span>}
+        {redirecting ? "Completando inicio de sesión…" : loading ? "Redirigiendo a Google…" : "Continuar con Google"}
       </button>
     </div>
   );
