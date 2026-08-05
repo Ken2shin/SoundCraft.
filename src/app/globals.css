@@ -1,0 +1,183 @@
+@import "tailwindcss";
+
+@theme {
+  /* ---- Tipografía ---- */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: var(--font-space-grotesk), var(--font-inter), ui-sans-serif, sans-serif;
+  --font-mono: var(--font-ibm-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* ---- Superficies: blanco + verde menta claro (nada de negro) ---- */
+  --color-surface: #ffffff;
+  --color-surface-900: #f7faf0;
+  --color-surface-800: #edf5e0;
+  --color-panel: #ffffff;
+  --color-panel-2: #f4f8eb;
+
+  /*
+   * Acento de marca verde (Duolingo/Spotify):
+   * el escalado "indigo" se redefine a VERDE para que toda la app
+   * herede la marca sin tocar cada clase.
+   */
+  --color-indigo-50: #f2fbeb;
+  --color-indigo-100: #e3f7cd;
+  --color-indigo-200: #c9eea2;
+  --color-indigo-300: #a9e469;
+  --color-indigo-400: #86d63b;
+  --color-indigo-500: #58cc02;
+  --color-indigo-600: #46a302;
+  --color-indigo-700: #397e06;
+  --color-indigo-800: #2f630a;
+  --color-indigo-900: #27530d;
+  --color-indigo-950: #122e02;
+
+  /* Escala de grises cálida INVERTIDA para modo claro:
+     los tonos claros se usan como TEXTO oscuro sobre blanco */
+  --color-stone-50: #2e2e2e;
+  --color-stone-100: #3c3c3c;
+  --color-stone-200: #414141;
+  --color-stone-300: #4c4c4c;
+  --color-stone-400: #6b6b6b;
+  --color-stone-500: #8a8a8a;
+  --color-stone-600: #9f9f9f;
+  --color-stone-700: #b5b5b5;
+  --color-stone-800: #cccccc;
+  --color-stone-900: #e0e0e0;
+  --color-stone-950: #f2f2f2;
+
+  --color-brand: #58cc02;
+  --color-brand-hot: #7ed957;
+  --color-ai: #1cb0f6;
+  --color-warn: #ffc800;
+  --color-alert: #ff4b4b;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
+body {
+  background-color: var(--color-surface);
+  color: #3c3c3c;
+  font-family: var(--font-sans);
+  color-scheme: light;
+  accent-color: #58cc02;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+::selection {
+  background: #58cc02;
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 2px solid #58cc02;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Grano sutil (textura) */
+.grain {
+  position: relative;
+}
+.grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+}
+
+/* Rejilla técnica que se disuelve hacia el centro */
+.hero-grid {
+  background-image: linear-gradient(to right, rgba(60, 60, 60, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(60, 60, 60, 0.06) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(ellipse 75% 65% at 50% 0%, black 25%, transparent 78%);
+  mask-image: radial-gradient(ellipse 75% 65% at 50% 0%, black 25%, transparent 78%);
+}
+
+/* ---------- Scrollbar ---------- */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d4d4d4;
+  border-radius: 999px;
+  border: 2px solid #ffffff;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #bdbdbd;
+}
+
+/* ---------- Slider vertical del EQ (Chrome/Edge) ---------- */
+input[type="range"].eq-range {
+  -webkit-appearance: none;
+  appearance: none;
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 40px;
+  height: 10rem;
+  background: transparent;
+  cursor: pointer;
+  outline: none;
+}
+input[type="range"].eq-range::-webkit-slider-runnable-track {
+  width: 4px;
+  height: 10rem;
+  background: linear-gradient(to top, #1cb0f6, #ffc800 50%, #ff4b4b);
+  border-radius: 9999px;
+}
+input[type="range"].eq-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: #ffffff;
+  border: 3px solid #58cc02;
+  box-shadow: 0 0 14px rgba(88, 204, 2, 0.55);
+  margin-left: -6px;
+}
+
+/* ---------- Slider vertical del EQ (Firefox) ---------- */
+input[type="range"].eq-range::-moz-range-track {
+  width: 4px;
+  height: 10rem;
+  background: linear-gradient(to top, #1cb0f6, #ffc800 50%, #ff4b4b);
+  border-radius: 9999px;
+}
+input[type="range"].eq-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 9999px;
+  background: #ffffff;
+  border: 3px solid #58cc02;
+}
+
+input[type="range"].eq-range:focus-visible {
+  outline: 2px solid #58cc02;
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
