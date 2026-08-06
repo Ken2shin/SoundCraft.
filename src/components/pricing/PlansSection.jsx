@@ -1,9 +1,9 @@
 "use client";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import { Check, Crown, Loader2, Sparkles, Waves, Mic, GitCompare, Scale, Music, FileAudio, Timer, BadgeCheck, Banknote, Trophy } from "lucide-react";
-import { PLAN_LABELS, PLAN_PRICES, MODULES, moduleAvailable, moduleTier, projectLimitFor } from "@/lib/plans";
+import { PLAN_LABELS, PLAN_PRICES, PLAN_CURRENCY_SYMBOL, MODULES, moduleAvailable, moduleTier, projectLimitFor } from "@/lib/plans";
 
 const MODULE_ICONS = {
   autopitch: Mic,
@@ -23,16 +23,16 @@ const PLANS = [
     id: "free",
     name: "Free",
     tagline: "Para arrancar",
-    price: "0 €",
-    period: "/ para siempre",
+    price: "$0",
+    period: "/ forever",
     badge: null,
     features: [
-      "Ecualizador de 3 bandas en tiempo real",
-      "Presets de EQ (Batería, Bajo, Guitarra, Voz)",
-      "Reproductor y espectro de frecuencias",
-      "3 proyectos activos",
-      "Tap Tempo & Key Finder (básico)",
-      "Retos diarios (1/día)",
+      "3-band real-time EQ",
+      "EQ Presets (Drums, Bass, Guitar, Vocals)",
+      "Player & frequency spectrum",
+      "3 active projects",
+      "Tap Tempo & Key Finder (basic)",
+      "Daily challenges (1/day)",
     ],
     modules: MODULES.filter(m => moduleAvailable("free", m.id)).map(m => ({
       id: m.id,
@@ -45,20 +45,20 @@ const PLANS = [
     id: "estudio",
     name: "Estudio",
     tagline: "Para producir en serio",
-    price: "2,99 €",
-    period: "/ mes · sin permanencia",
-    badge: "Más popular",
+    price: "$2.99",
+    period: "/ month · no commitment",
+    badge: "Most popular",
     features: [
-      "Todo lo del plan Free",
-      "10 proyectos activos",
-      "Auto-Pitch (corrector de notas vocal)",
-      "Denoiser & Stem Splitter (básico)",
+      "Everything in Free",
+      "10 active projects",
+      "Auto-Pitch (vocal pitch corrector)",
+      "Denoiser & Stem Splitter (basic)",
       "A/B Reference Matcher",
-      "Generator IA (acordes, 3/día)",
-      "Exportación WAV estándar",
-      "Copyright & Metadatos",
-      "Marketplace (ver y solicitar)",
-      "Retos diarios (3/día)",
+      "Chord Generator (3/day)",
+      "Standard WAV export",
+      "Copyright & Metadata",
+      "Marketplace (view & request)",
+      "Daily challenges (3/day)",
     ],
     modules: MODULES.filter(m => moduleAvailable("estudio", m.id)).map(m => ({
       id: m.id,
@@ -71,20 +71,20 @@ const PLANS = [
     id: "pro",
     name: "Pro",
     tagline: "Para profesionales",
-    price: "4,99 €",
-    period: "/ mes · sin permanencia",
-    badge: "Profesional",
+    price: "$4.99",
+    period: "/ month · no commitment",
+    badge: "Professional",
     features: [
-      "Todo lo del plan Estudio",
-      "Proyectos ilimitados",
+      "Everything in Estudio",
+      "Unlimited projects",
       "Instant Master (LUFS -14/-16/-23)",
-      "Stem Splitter completo",
+      "Full Stem Splitter",
       "Format Converter (WAV 16/24-bit, 44.1/48/96 kHz)",
-      "Generator IA ilimitado",
-      "Copyright & Metadatos completo",
-      "Marketplace prioritario",
-      "Retos diarios ilimitados",
-      "Soporte prioritario",
+      "Unlimited Chord Generator",
+      "Full Copyright & Metadata",
+      "Priority Marketplace",
+      "Unlimited daily challenges",
+      "Priority support",
     ],
     modules: MODULES.filter(m => moduleAvailable("pro", m.id)).map(m => ({
       id: m.id,
@@ -97,17 +97,17 @@ const PLANS = [
     id: "enterprise",
     name: "Enterprise",
     tagline: "Para equipos y estudios",
-    price: "19,99 €",
-    period: "/ mes · a medida",
+    price: "$19.99",
+    period: "/ month · custom",
     badge: "Empresas",
     features: [
-      "Todo lo del plan Pro",
-      "Licencia comercial incluida",
-      "SLA y soporte 24/7",
-      "Onboarding dedicado",
-      "API access (próximamente)",
-      "Gestión multi-usuario",
-      "Facturación consolidada",
+      "Everything in Pro",
+      "Commercial license included",
+      "SLA & 24/7 support",
+      "Dedicated onboarding",
+      "API access (coming soon)",
+      "Multi-user management",
+      "Consolidated billing",
     ],
     modules: MODULES.filter(m => moduleAvailable("enterprise", m.id)).map(m => ({
       id: m.id,
@@ -167,6 +167,7 @@ function ModuleBadges({ modules, plan }) {
 
 export default function PlansSection({ compact = false, user = null }) {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [checkoutPlan, setCheckoutPlan] = useState(null);
   const [checkoutError, setCheckoutError] = useState("");
   const currentPlan = user?.plan === "pro" ? "pro" : user?.plan === "estudio" ? "estudio" : user?.plan === "enterprise" ? "enterprise" : "free";
@@ -174,6 +175,29 @@ export default function PlansSection({ compact = false, user = null }) {
 
   const justUpgraded = searchParams.get("upgrade") === "success";
   const cancelledUpgrade = searchParams.get("upgrade") === "cancelled";
+
+  // Polling tras checkout exitoso para sincronizar plan con Stripe
+  useEffect(() => {
+    if (!justUpgraded) return;
+    let attempts = 0;
+    const maxAttempts = 12; // ~30 segundos
+    const interval = setInterval(async () => {
+      attempts++;
+      try {
+        const res = await fetch("/api/stripe/refresh");
+        const json = await res.json();
+        if (res.ok && json.plan && json.plan !== "free") {
+          router.refresh(); // Re-renderiza server components con plan actualizado
+          clearInterval(interval);
+        } else if (attempts >= maxAttempts) {
+          clearInterval(interval);
+        }
+      } catch (e) {
+        console.error("[PlansSection] refresh error:", e);
+      }
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [justUpgraded, router]);
 
   const freeCta = isLoggedIn
     ? { href: "/dashboard", label: "Ir a mis proyectos" }
@@ -300,7 +324,7 @@ export default function PlansSection({ compact = false, user = null }) {
         </p>
         {justUpgraded && (
           <p className="mx-auto max-w-md rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-center text-sm text-emerald-600">
-            ¡Pago completado! Tu plan premium está activo.
+            ¡Pago completado! Sincronizando tu plan…
           </p>
         )}
         {cancelledUpgrade && (

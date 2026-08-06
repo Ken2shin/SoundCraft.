@@ -14,7 +14,7 @@ export default async function PlanesPage() {
     user = await ensureUser(session);
   } catch (err) {
     console.error("[planes] base de datos:", err.message);
-    user = { ...session, plan: "free" };
+    user = { ...session, plan: null };
   }
 
   return (

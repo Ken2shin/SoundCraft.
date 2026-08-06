@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { AudioWaveform, FolderKanban, Gem, LogOut, Sparkles } from "lucide-react";
+import { AudioWaveform, FolderKanban, Gem, LogOut, Sparkles, Wrench, Puzzle } from "lucide-react";
 
 export default function Sidebar({ user }) {
   const pathname = usePathname();
@@ -17,8 +17,14 @@ export default function Sidebar({ user }) {
 
   const nav = [
     { href: "/dashboard", label: "Proyectos", icon: FolderKanban },
+    { href: "/modulos", label: "Módulos", icon: Puzzle },
     { href: "/planes", label: "Planes", icon: Gem },
   ];
+
+  const planLabel = user?.plan === "pro" ? "PRO" : user?.plan === "estudio" ? "ESTUDIO" : user?.plan === "enterprise" ? "ENTERPRISE" : "FREE";
+  const planColor = user?.plan === "pro" ? "text-emerald-600" : user?.plan === "estudio" ? "text-emerald-600" : user?.plan === "enterprise" ? "text-amber-600" : "text-indigo-600";
+  const planBg = user?.plan === "pro" ? "bg-emerald-500/15" : user?.plan === "estudio" ? "bg-emerald-500/15" : user?.plan === "enterprise" ? "bg-amber-500/15" : "bg-indigo-500/15";
+  const isFreeOrUnknown = !user?.plan || user?.plan === "free";
 
   return (
     <aside className="flex h-full w-60 flex-col border-r border-[#3c3c3c]/10 bg-surface-900/60 px-4 py-5">
@@ -61,21 +67,17 @@ export default function Sidebar({ user }) {
       <div className="mt-auto space-y-3">
         <div className="flex items-center justify-between rounded-xl border border-[#3c3c3c]/10 bg-[#3c3c3c]/[0.04] px-3 py-2.5">
           <span className="text-xs text-stone-400">Tu plan</span>
-          {user?.plan === "pro" ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-bold text-emerald-600">
-              <Sparkles className="h-3 w-3" /> PRO
-            </span>
-          ) : user?.plan === "estudio" ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-bold text-emerald-600">
-              <Sparkles className="h-3 w-3" /> ESTUDIO
-            </span>
-          ) : (
+          {isFreeOrUnknown ? (
             <Link
               href="/planes"
               className="inline-flex items-center gap-1 rounded-full bg-indigo-500/15 px-2.5 py-0.5 text-[11px] font-bold text-indigo-600 transition-colors hover:bg-indigo-500/25"
             >
               FREE · Mejorar
             </Link>
+          ) : (
+            <span className={`inline-flex items-center gap-1 rounded-full ${planBg} px-2.5 py-0.5 text-[11px] font-bold ${planColor}`}>
+              <Sparkles className="h-3 w-3" /> {planLabel}
+            </span>
           )}
         </div>
 

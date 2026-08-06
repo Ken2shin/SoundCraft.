@@ -61,10 +61,10 @@ export async function POST(request) {
       line_items: [
         {
           quantity: 1,
-          price_data: {
-            currency: "eur",
-            unit_amount: plan.amount,
-            recurring: { interval: plan.interval },
+price_data: {
+              currency: "usd",
+              unit_amount: plan.amount,
+              recurring: { interval: plan.interval },
             product_data: {
               name: `SoundCraft ${plan.name}`,
               description: `Suscripción mensual al plan ${plan.name} de SoundCraft AI.`,

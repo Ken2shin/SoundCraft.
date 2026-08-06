@@ -7,6 +7,14 @@ export const PLAN_LABELS = { free: "Free", estudio: "Estudio", pro: "Pro", enter
 // Precio en céntimos/mes (para la UI y para Stripe).
 export const PLAN_PRICES = { free: 0, estudio: 299, pro: 499, enterprise: 1999 };
 
+export const PLAN_CURRENCY = "USD";
+export const PLAN_CURRENCY_SYMBOL = "$";
+export const PLAN_PRICE_FORMAT = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 2,
+});
+
 export function resolvePlan(plan) {
   return plan in PLAN_LEVELS ? plan : "free";
 }

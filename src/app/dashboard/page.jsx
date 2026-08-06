@@ -18,7 +18,7 @@ export default async function DashboardPage() {
     projects = await listProjects(user.id);
   } catch (err) {
     console.error("[dashboard] base de datos:", err.message);
-    user = { ...session, plan: "free" };
+    user = { ...session, plan: null }; // No forzar "free" — deja que el cliente muestre "—"
   }
 
   return <DashboardClient initialProjects={projects} user={user} />;
