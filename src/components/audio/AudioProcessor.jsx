@@ -22,7 +22,6 @@ import EQVisualizer from "./EQVisualizer";
 import Waveform from "./Waveform";
 import PresetPanel from "./PresetPanel";
 import AISuggestions from "./AISuggestions";
-import ModulesHub from "../modules/ModulesHub";
 
 const MAX_AUDIO_BYTES = 10 * 1024 * 1024; // 10 MB
 const ACCEPTED_TYPES = new Set([
@@ -633,20 +632,7 @@ export default function AudioProcessor({
         instrument={presetKey || "Flat"}
         onApply={changeBand}
         isPro={isPro}
-      />)
-
-      {/* ---------- Módulos de producción ---------- */}
-      {isLoaded && buffer && (
-        <ModulesHub
-          plan={plan}
-          projectId={projectId}
-          audioFile={audioFile}
-          buffer={buffer}
-          eq={eq}
-          changeBand={changeBand}
-          onSaveState={onSaveState}
-        />
-      )}
+      />
     </div>
   );
 }
