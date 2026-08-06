@@ -18,8 +18,12 @@ export default async function DashboardPage() {
     projects = await listProjects(user.id);
   } catch (err) {
     console.error("[dashboard] base de datos:", err.message);
-    user = { ...session, plan: null }; // No forzar "free" — deja que el cliente muestre "—"
+    user = { ...session, plan: null };
   }
 
-  return <DashboardClient initialProjects={projects} user={user} />;
+  // Serializar props para el boundary Server/Client
+  const serializedProjects = projects ? JSON.parse(JSON.stringify(projects)) : [];
+  const serializedUser = user ? JSON.parse(JSON.stringify(user)) : null;
+
+  return <DashboardClient initialProjects={serializedProjects} user={serializedUser} />;
 }
