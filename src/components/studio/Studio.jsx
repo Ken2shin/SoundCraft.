@@ -12,6 +12,7 @@ export default function Studio({ project, user }) {
   const [savedAt, setSavedAt] = useState(null);
   const plan = user?.plan === "pro" ? "pro" : user?.plan === "estudio" ? "estudio" : "free";
   const planLabel = plan === "pro" ? "Pro" : plan === "estudio" ? "Estudio" : "Free";
+  const isPaid = plan === "pro" || plan === "estudio";
 
   const eqState = project.eq_state || {};
   const initialEq = {
