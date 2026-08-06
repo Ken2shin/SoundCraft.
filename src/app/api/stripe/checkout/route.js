@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 const PLANS = {
   estudio: { name: "Estudio", amount: 299, interval: "month" },
   pro: { name: "Pro", amount: 499, interval: "month" },
+  enterprise: { name: "Enterprise", amount: 1999, interval: "month" },
 };
 
 export async function POST(request) {

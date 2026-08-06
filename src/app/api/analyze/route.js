@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getRequestSession } from "@/lib/auth";
 import { ensureUser, getProjectByIdAndUser, insertAnalysis } from "@/lib/db/repo";
 import { rateLimit } from "@/lib/rate-limit";
+import { canUseAI } from "@/lib/plans";
 
 const MAX_AUDIO_BYTES = 10 * 1024 * 1024; // 10 MB
 const ACCEPTED_MIME = new Set([
@@ -28,6 +29,17 @@ export async function POST(request) {
     return NextResponse.json(
       { error: `Límite de análisis alcanzado. Espera ${rl.retryAfter}s` },
       { status: 429 }
+    );
+  }
+
+  const user = await ensureUser(session);
+  if (!canUseAI(user.plan)) {
+    return NextResponse.json(
+      {
+        error: "El análisis con IA es exclusivo de Estudio y Pro. Mejora tu plan desde /planes.",
+        code: "PLAN_REQUIRED",
+      },
+      { status: 402 }
     );
   }
 
@@ -65,7 +77,6 @@ export async function POST(request) {
   const pythonUrl = process.env.PYTHON_SERVICE_URL || "http://127.0.0.1:8000";
 
   try {
-    const user = await ensureUser(session);
     const project = await getProjectByIdAndUser(projectId, user.id);
     if (!project) {
       return NextResponse.json({ error: "Proyecto no encontrado" }, { status: 404 });

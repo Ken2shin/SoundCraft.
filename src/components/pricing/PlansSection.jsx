@@ -2,7 +2,21 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { Check, Crown, Loader2 } from "lucide-react";
+import { Check, Crown, Loader2, Sparkles, Waves, Mic, GitCompare, Scale, Music, FileAudio, Timer, BadgeCheck, Banknote, Trophy } from "lucide-react";
+import { PLAN_LABELS, PLAN_PRICES, MODULES, moduleAvailable, moduleTier, projectLimitFor } from "@/lib/plans";
+
+const MODULE_ICONS = {
+  autopitch: Mic,
+  denoiser: Waves,
+  reference: GitCompare,
+  master: Scale,
+  chords: Music,
+  converter: FileAudio,
+  tapping: Timer,
+  copyright: BadgeCheck,
+  marketplace: Banknote,
+  challenges: Trophy,
+};
 
 const PLANS = [
   {
@@ -14,11 +28,17 @@ const PLANS = [
     badge: null,
     features: [
       "Ecualizador de 3 bandas en tiempo real",
-      "Presets para Batería, Bajo, Guitarra y Voz",
+      "Presets de EQ (Batería, Bajo, Guitarra, Voz)",
       "Reproductor y espectro de frecuencias",
-      "Análisis de audio con IA",
       "3 proyectos activos",
+      "Tap Tempo & Key Finder (básico)",
+      "Retos diarios (1/día)",
     ],
+    modules: MODULES.filter(m => moduleAvailable("free", m.id)).map(m => ({
+      id: m.id,
+      name: m.name,
+      tier: moduleTier("free", m.id),
+    })),
     highlight: false,
   },
   {
@@ -31,28 +51,69 @@ const PLANS = [
     features: [
       "Todo lo del plan Free",
       "10 proyectos activos",
-      "Análisis de IA ilimitado",
-      "Recomendaciones de EQ personalizadas",
-      "Exportación WAV",
-      "Acceso anticipado a nuevas funciones",
+      "Auto-Pitch (corrector de notas vocal)",
+      "Denoiser & Stem Splitter (básico)",
+      "A/B Reference Matcher",
+      "Generator IA (acordes, 3/día)",
+      "Exportación WAV estándar",
+      "Copyright & Metadatos",
+      "Marketplace (ver y solicitar)",
+      "Retos diarios (3/día)",
     ],
+    modules: MODULES.filter(m => moduleAvailable("estudio", m.id)).map(m => ({
+      id: m.id,
+      name: m.name,
+      tier: moduleTier("estudio", m.id),
+    })),
     highlight: true,
   },
   {
     id: "pro",
     name: "Pro",
-    tagline: "Para quienes exportan",
+    tagline: "Para profesionales",
     price: "4,99 €",
     period: "/ mes · sin permanencia",
     badge: "Profesional",
     features: [
       "Todo lo del plan Estudio",
       "Proyectos ilimitados",
-      "Exportación HD (WAV 48 kHz)",
-      "Prioridad en el análisis de IA",
+      "Instant Master (LUFS -14/-16/-23)",
+      "Stem Splitter completo",
+      "Format Converter (WAV 16/24-bit, 44.1/48/96 kHz)",
+      "Generator IA ilimitado",
+      "Copyright & Metadatos completo",
+      "Marketplace prioritario",
+      "Retos diarios ilimitados",
       "Soporte prioritario",
-      "Etiquetas y organización avanzadas",
     ],
+    modules: MODULES.filter(m => moduleAvailable("pro", m.id)).map(m => ({
+      id: m.id,
+      name: m.name,
+      tier: moduleTier("pro", m.id),
+    })),
+    highlight: false,
+  },
+  {
+    id: "enterprise",
+    name: "Enterprise",
+    tagline: "Para equipos y estudios",
+    price: "19,99 €",
+    period: "/ mes · a medida",
+    badge: "Empresas",
+    features: [
+      "Todo lo del plan Pro",
+      "Licencia comercial incluida",
+      "SLA y soporte 24/7",
+      "Onboarding dedicado",
+      "API access (próximamente)",
+      "Gestión multi-usuario",
+      "Facturación consolidada",
+    ],
+    modules: MODULES.filter(m => moduleAvailable("enterprise", m.id)).map(m => ({
+      id: m.id,
+      name: m.name,
+      tier: moduleTier("enterprise", m.id),
+    })),
     highlight: false,
   },
 ];
@@ -78,11 +139,37 @@ function FeatureList({ items, accent }) {
   );
 }
 
+function ModuleBadges({ modules, plan }) {
+  return (
+    <div className="mt-4 flex flex-wrap gap-2">
+      {modules.map((m) => {
+        const tier = moduleTier(plan, m.id);
+        const Icon = MODULE_ICONS[m.id];
+        if (tier === 0) return null;
+        return (
+          <span
+            key={m.id}
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-medium ${
+              tier >= 3 ? "bg-amber-500/15 text-amber-600" :
+              tier >= 2 ? "bg-emerald-500/15 text-emerald-600" :
+              "bg-indigo-500/15 text-indigo-600"
+            }`}
+          >
+            <Icon className="h-3 w-3" />
+            {m.name}
+            {tier >= 2 && <span className="ml-1">•</span>}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function PlansSection({ compact = false, user = null }) {
   const searchParams = useSearchParams();
   const [checkoutPlan, setCheckoutPlan] = useState(null);
   const [checkoutError, setCheckoutError] = useState("");
-  const currentPlan = user?.plan === "pro" ? "pro" : user?.plan === "estudio" ? "estudio" : "free";
+  const currentPlan = user?.plan === "pro" ? "pro" : user?.plan === "estudio" ? "estudio" : user?.plan === "enterprise" ? "enterprise" : "free";
   const isLoggedIn = Boolean(user?.id || user?.email);
 
   const justUpgraded = searchParams.get("upgrade") === "success";
@@ -123,25 +210,25 @@ export default function PlansSection({ compact = false, user = null }) {
           Empieza en silencio. Sube el volumen cuando toque.
         </h2>
         <p className="mt-3 text-sm text-stone-500">
-          Todo el estudio funciona gratis. Estudio y Pro son para cuando necesitas exportar o producir más.
+          El estudio base es gratis. Los planes desbloquean módulos de IA, exportación y herramientas profesionales.
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {PLANS.map((plan) => {
           const isCurrent = currentPlan === plan.id;
+          const limit = projectLimitFor(plan.id);
           return (
             <div
               key={plan.id}
-              className={`relative flex flex-col rounded-xl border p-8 ${
-                plan.highlight
-                  ? "border-[#58cc02]/30 bg-gradient-to-b from-[#58cc02]/[0.08] to-transparent shadow-[0_0_60px_-30px_rgba(88,204,2,0.6)]"
-                  : "border-[#3c3c3c]/12 bg-white"
+              className={`relative flex flex-col rounded-xl border p-6 ${plan.highlight
+                ? "border-[#58cc02]/30 bg-gradient-to-b from-[#58cc02]/[0.08] to-transparent shadow-[0_0_60px_-30px_rgba(88,204,2,0.6)]"
+                : "border-[#3c3c3c]/12 bg-white"
               }`}
             >
               {(plan.badge || isCurrent) && (
                 <span
-                  className={`absolute -top-3 left-8 rounded-full px-3.5 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.2em] ${
+                  className={`absolute -top-3 left-6 rounded-full px-3 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.2em] ${
                     isCurrent
                       ? "bg-indigo-500 text-white"
                       : "bg-[#58cc02] text-[#ffffff]"
@@ -151,7 +238,7 @@ export default function PlansSection({ compact = false, user = null }) {
                 </span>
               )}
 
-              <div className="mb-6 flex items-center justify-between">
+              <div className="mb-4 flex items-center justify-between">
                 <div>
                   <p className="flex items-center gap-2 font-display text-lg font-semibold text-stone-100">
                     <Crown className="h-4 w-4 text-[#46a302]" />
@@ -163,16 +250,18 @@ export default function PlansSection({ compact = false, user = null }) {
                 </div>
               </div>
 
-              <p className="mb-6 flex items-baseline gap-2">
-                <span className="font-display text-5xl font-semibold tracking-tight text-stone-50">{plan.price}</span>
+              <p className="mb-4 flex items-baseline gap-2">
+                <span className="font-display text-4xl font-semibold tracking-tight text-stone-50">{plan.price}</span>
                 <span className="text-sm text-stone-500">{plan.period}</span>
               </p>
 
               <FeatureList items={plan.features} accent={plan.highlight} />
 
+              <ModuleBadges modules={plan.modules} plan={plan.id} />
+
               {isCurrent ? (
                 <div className="mt-auto rounded-md border border-indigo-500/30 bg-indigo-500/10 py-2.5 text-center text-sm font-semibold text-indigo-400">
-                  Este es tu plan
+                  Este es tu plan · {limit === Infinity ? "Proyectos ilimitados" : `${limit} proyectos`}
                 </div>
               ) : plan.id === "free" ? (
                 <Link
@@ -187,7 +276,7 @@ export default function PlansSection({ compact = false, user = null }) {
                   onClick={() => startCheckout(plan.id)}
                   disabled={checkoutPlan === plan.id}
                   className={`mt-auto inline-flex items-center justify-center gap-2 rounded-md py-2.5 text-center text-sm font-bold text-[#ffffff] shadow-[0_0_30px_-10px_rgba(88,204,2,0.9)] transition-all hover:bg-[#46a302] disabled:cursor-not-allowed disabled:opacity-60 ${
-                    plan.id === "pro" ? "bg-[#58cc02]" : "bg-[#46a302]"
+                    plan.id === "pro" || plan.id === "enterprise" ? "bg-[#58cc02]" : "bg-[#46a302]"
                   }`}
                 >
                   {checkoutPlan === plan.id ? (

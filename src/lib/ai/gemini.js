@@ -29,6 +29,37 @@ Reglas OBLIGATORIAS de formato:
 4. La descripción debe ser accionable y mencionar la técnica usada (corte para claridad, realce para presencia, etc.).
 5. No inventes bandas que no existan. No uses más de 15 palabras por descripción.`;
 
+/** Llamada genérica a Gemini: devuelve el texto crudo (server-only). */
+export async function generateContent(prompt, { systemPrompt = "", temperature = 0.5, maxTokens = 1000 } = {}) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY no está configurada. Revisa tu archivo .env");
+  }
+  const model = process.env.GEMINI_MODEL || "gemma-4-31b-it";
+
+  const res = await fetch(`${API_BASE}/models/${model}:generateContent`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": apiKey,
+    },
+    body: JSON.stringify({
+      system_instruction: systemPrompt ? { parts: [{ text: systemPrompt }] } : undefined,
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature,
+        maxOutputTokens: maxTokens,
+      },
+    }),
+    signal: AbortSignal.timeout(30_000),
+  });
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(`Gemini ${res.status}: ${json?.error?.message || "error desconocido"}`);
+  }
+  return json?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+}
+
 export function sanitizeSuggestions(raw) {
   const list = Array.isArray(raw?.suggestions) ? raw.suggestions : [];
   const seen = new Set();

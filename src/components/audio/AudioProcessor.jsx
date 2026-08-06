@@ -22,6 +22,7 @@ import EQVisualizer from "./EQVisualizer";
 import Waveform from "./Waveform";
 import PresetPanel from "./PresetPanel";
 import AISuggestions from "./AISuggestions";
+import ModulesHub from "../modules/ModulesHub";
 
 const MAX_AUDIO_BYTES = 10 * 1024 * 1024; // 10 MB
 const ACCEPTED_TYPES = new Set([
@@ -64,9 +65,10 @@ export default function AudioProcessor({
   projectId,
   initialEq = DEFAULT_EQ,
   initialPresetKey = "Flat",
-  isPro = false,
+  plan = "free",
   onSaveState,
 }) {
+  const isPro = plan === "pro" || plan === "estudio";
   const playerRef = useRef(null);
   const eqRef = useRef(null);
   const soloHpRef = useRef(null);
@@ -95,6 +97,7 @@ export default function AudioProcessor({
   const [soloing, setSoloing] = useState(false);
   const [peaks, setPeaks] = useState(null);
   const [audioFile, setAudioFile] = useState(null);
+  const [buffer, setBuffer] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [savedAt, setSavedAt] = useState(null);
@@ -221,6 +224,7 @@ export default function AudioProcessor({
         soloLpRef.current = soloLp;
         analyserRef.current = analyser;
         bufferRef.current = audioBuffer;
+        setBuffer(audioBuffer);
         audioFileRef.current = file;
         setAudioFile(file);
         lastPosRef.current = 0;
@@ -629,7 +633,20 @@ export default function AudioProcessor({
         instrument={presetKey || "Flat"}
         onApply={changeBand}
         isPro={isPro}
-      />
+      />)
+
+      {/* ---------- Módulos de producción ---------- */}
+      {isLoaded && buffer && (
+        <ModulesHub
+          plan={plan}
+          projectId={projectId}
+          audioFile={audioFile}
+          buffer={buffer}
+          eq={eq}
+          changeBand={changeBand}
+          onSaveState={onSaveState}
+        />
+      )}
     </div>
   );
 }

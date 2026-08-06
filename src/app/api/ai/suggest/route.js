@@ -7,11 +7,23 @@ import {
 } from "@/lib/db/repo";
 import { rateLimit } from "@/lib/rate-limit";
 import { suggestEQ } from "@/lib/ai/gemini";
+import { canUseAI } from "@/lib/plans";
 
 export async function POST(request) {
   const session = await getRequestSession(request);
   if (!session) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+  }
+
+  const user = await ensureUser(session);
+  if (!canUseAI(user.plan)) {
+    return NextResponse.json(
+      {
+        error: "El asistente de IA es exclusivo de Estudio y Pro. Mejora tu plan desde /planes.",
+        code: "PLAN_REQUIRED",
+      },
+      { status: 402 }
+    );
   }
 
   const rl = rateLimit({ key: `suggest:${session.uid}`, limit: 10, windowMs: 60_000 });
@@ -41,7 +53,6 @@ export async function POST(request) {
   }
 
   try {
-    const user = await ensureUser(session);
     const project = await getProjectByIdAndUser(projectId, user.id);
     if (!project) {
       return NextResponse.json({ error: "Proyecto no encontrado" }, { status: 404 });

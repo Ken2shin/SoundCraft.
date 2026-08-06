@@ -10,8 +10,8 @@ export default function Studio({ project, user }) {
   const [title, setTitle] = useState(project.title);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState(null);
-  const isPaid = user?.plan === "pro" || user?.plan === "estudio";
-  const planLabel = user?.plan === "pro" ? "Pro" : user?.plan === "estudio" ? "Estudio" : "Free";
+  const plan = user?.plan === "pro" ? "pro" : user?.plan === "estudio" ? "estudio" : "free";
+  const planLabel = plan === "pro" ? "Pro" : plan === "estudio" ? "Estudio" : "Free";
 
   const eqState = project.eq_state || {};
   const initialEq = {
@@ -88,7 +88,7 @@ export default function Studio({ project, user }) {
             projectId={project.id}
             initialEq={initialEq}
             initialPresetKey={eqState.presetKey || "Flat"}
-            isPro={isPaid}
+            plan={plan}
             onSaveState={saveState}
           />
         </main>
