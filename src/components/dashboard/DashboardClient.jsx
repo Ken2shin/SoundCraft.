@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FolderOpen, Loader2, PlusCircle } from "lucide-react";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
@@ -9,12 +9,37 @@ import Modal from "@/components/ui/Modal";
 
 export default function DashboardClient({ initialProjects, user }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [projects, setProjects] = useState(initialProjects || []);
   const [search, setSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [createTitle, setCreateTitle] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState(null);
+
+  // Polling tras checkout exitoso para sincronizar plan con Stripe
+  useEffect(() => {
+    const justUpgraded = searchParams.get("upgrade") === "success";
+    if (!justUpgraded) return;
+    let attempts = 0;
+    const maxAttempts = 12;
+    const interval = setInterval(async () => {
+      attempts++;
+      try {
+        const res = await fetch("/api/stripe/refresh");
+        const json = await res.json();
+        if (res.ok && json.plan && json.plan !== "free") {
+          router.refresh();
+          clearInterval(interval);
+        } else if (attempts >= maxAttempts) {
+          clearInterval(interval);
+        }
+      } catch (e) {
+        console.error("[DashboardClient] refresh error:", e);
+      }
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [router, searchParams]);
 
   const filtered = search.trim()
     ? projects.filter((p) =>
