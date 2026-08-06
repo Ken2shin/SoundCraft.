@@ -21,6 +21,16 @@ export async function getUserByEmail(email) {
   return res.rows[0] || null;
 }
 
+export async function setUserPlan(uid, plan) {
+  const allowed = new Set(["free", "estudio", "pro"]);
+  if (!allowed.has(plan)) return null;
+  const res = await query(
+    `UPDATE users SET plan = $2, updated_at = now() WHERE id = $1 RETURNING ${USER_COLS}`,
+    [uid, plan]
+  );
+  return res.rows[0] || null;
+}
+
 export async function getUserByUid(uid) {
   const res = await query(
     `SELECT ${USER_COLS} FROM users WHERE id = $1`,

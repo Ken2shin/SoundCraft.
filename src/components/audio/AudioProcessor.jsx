@@ -552,15 +552,16 @@ export default function AudioProcessor({
                   title="Vuelve a escuchar la mezcla completa"
                 >
                   <X className="h-3 w-3" />
-                  Solo: {PRESETS[presetKey]?.label || presetKey} · Cerrar
+                  Solo (aprox.): {PRESETS[presetKey]?.label || presetKey} · Cerrar
                 </button>
               )}
             </div>
             <PresetPanel activeKey={presetKey} onApply={applyPreset} />
             {soloing && (
               <p className="mt-2 text-xs text-stone-500">
-                Escuchando solo las frecuencias de {PRESETS[presetKey]?.label?.toLowerCase() || "ese instrumento"}.
-                Elige otro instrumento o la mezcla completa para volver.
+                Aislamiento por frecuencias (aproximado): escuchas sobre todo el rango de{" "}
+                {PRESETS[presetKey]?.label?.toLowerCase() || "ese instrumento"}. Para una
+                separación real de stems necesitas IA de servidor.
               </p>
             )}
           </div>

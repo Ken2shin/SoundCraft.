@@ -9,6 +9,7 @@ import {
   Wand2,
 } from "lucide-react";
 import { BANDS } from "@/lib/audio/presets";
+import { analyzeAudioInBrowser } from "@/lib/audio/browserAnalyzer";
 
 const STATUS = {
   idle: "idle",
@@ -35,18 +36,14 @@ export default function AISuggestions({ projectId, audioFile, instrument, onAppl
     setError(null);
     setStatus(STATUS.analyzing);
     try {
-      const fd = new FormData();
-      fd.append("audio", audioFile);
-      fd.append("projectId", projectId);
-      const res = await fetch("/api/analyze", { method: "POST", body: fd });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Error al analizar");
-      setMetrics(json.metrics);
+      const metrics = await analyzeAudioInBrowser(audioFile);
+      setMetrics(metrics);
       setStatus(STATUS.ready);
-      await runSuggestions(json.metrics);
+      await runSuggestions(metrics);
     } catch (err) {
+      console.error("[AISuggestions] análisis:", err);
       setStatus(STATUS.error);
-      setError(err.message);
+      setError("No se pudo analizar el audio en el navegador. Prueba con otro archivo.");
     }
   };
 
@@ -85,7 +82,7 @@ export default function AISuggestions({ projectId, audioFile, instrument, onAppl
             Asistente de IA
           </h3>
           <p className="mt-0.5 text-xs text-stone-400">
-            Análisis espectral (librosa) + recomendaciones de EQ con IA en lenguaje natural.
+            Análisis espectral en tu navegador + recomendaciones de EQ con IA en lenguaje natural.
           </p>
         </div>
         <button

@@ -1,8 +1,8 @@
 "use client";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { Check, Crown, X } from "lucide-react";
-import Modal from "@/components/ui/Modal";
+import { Check, Crown, Loader2 } from "lucide-react";
 
 const PLANS = [
   {
@@ -79,13 +79,36 @@ function FeatureList({ items, accent }) {
 }
 
 export default function PlansSection({ compact = false, user = null }) {
-  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const searchParams = useSearchParams();
+  const [checkoutPlan, setCheckoutPlan] = useState(null);
+  const [checkoutError, setCheckoutError] = useState("");
   const currentPlan = user?.plan === "pro" ? "pro" : user?.plan === "estudio" ? "estudio" : "free";
   const isLoggedIn = Boolean(user?.id || user?.email);
+
+  const justUpgraded = searchParams.get("upgrade") === "success";
+  const cancelledUpgrade = searchParams.get("upgrade") === "cancelled";
 
   const freeCta = isLoggedIn
     ? { href: "/dashboard", label: "Ir a mis proyectos" }
     : { href: "/auth/signup", label: "Empezar gratis" };
+
+  const startCheckout = async (planId) => {
+    setCheckoutError("");
+    setCheckoutPlan(planId);
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: planId }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "No se pudo iniciar el pago");
+      window.open(json.url, "_self", "noopener");
+    } catch (err) {
+      setCheckoutError(err.message);
+      setCheckoutPlan(null);
+    }
+  };
 
   return (
     <section
@@ -161,12 +184,20 @@ export default function PlansSection({ compact = false, user = null }) {
               ) : (
                 <button
                   type="button"
-                  onClick={() => setUpgradeOpen(true)}
-                  className={`mt-auto inline-flex items-center justify-center gap-2 rounded-md py-2.5 text-center text-sm font-bold text-[#ffffff] shadow-[0_0_30px_-10px_rgba(88,204,2,0.9)] transition-all hover:bg-[#46a302] ${
+                  onClick={() => startCheckout(plan.id)}
+                  disabled={checkoutPlan === plan.id}
+                  className={`mt-auto inline-flex items-center justify-center gap-2 rounded-md py-2.5 text-center text-sm font-bold text-[#ffffff] shadow-[0_0_30px_-10px_rgba(88,204,2,0.9)] transition-all hover:bg-[#46a302] disabled:cursor-not-allowed disabled:opacity-60 ${
                     plan.id === "pro" ? "bg-[#58cc02]" : "bg-[#46a302]"
                   }`}
                 >
-                  Mejorar a {plan.name}
+                  {checkoutPlan === plan.id ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Abriendo pago…
+                    </>
+                  ) : (
+                    `Mejorar a ${plan.name}`
+                  )}
                 </button>
               )}
             </div>
@@ -174,30 +205,26 @@ export default function PlansSection({ compact = false, user = null }) {
         })}
       </div>
 
-      <p className="mt-8 text-center font-mono text-[10px] uppercase tracking-[0.25em] text-stone-600">
-        Sin tarjeta para empezar · Cancelas cuando quieras
-      </p>
-
-      <Modal open={upgradeOpen} title="Pagos · Próximamente" onClose={() => setUpgradeOpen(false)}>
-        <p className="text-sm leading-relaxed text-stone-300">
-          La integración de pagos está en desarrollo. Los planes Estudio y Pro habilitarán la
-          exportación y el análisis ilimitado en cuanto esté disponible. Mientras tanto, sigue
-          creando con tu plan actual.
+      <div className="mt-8 space-y-2">
+        <p className="text-center font-mono text-[10px] uppercase tracking-[0.25em] text-stone-600">
+          Sin tarjeta para empezar · Cancelas cuando quieras
         </p>
-        <div className="mt-6 flex items-center justify-between">
-          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-stone-600">
-            2,99 € / 4,99 € por mes · sin permanencia
+        {justUpgraded && (
+          <p className="mx-auto max-w-md rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-center text-sm text-emerald-600">
+            ¡Pago completado! Tu plan premium está activo.
           </p>
-          <button
-            type="button"
-            onClick={() => setUpgradeOpen(false)}
-            className="inline-flex items-center gap-2 rounded-md bg-[#58cc02] px-4 py-2 text-sm font-semibold text-[#ffffff] transition-colors hover:bg-[#46a302]"
-          >
-            <X className="h-3.5 w-3.5" />
-            Entendido
-          </button>
-        </div>
-      </Modal>
+        )}
+        {cancelledUpgrade && (
+          <p className="mx-auto max-w-md rounded-lg border border-stone-500/30 bg-stone-500/10 px-3 py-2 text-center text-sm text-stone-400">
+            El pago se canceló. Tu plan no ha cambiado.
+          </p>
+        )}
+        {checkoutError && (
+          <p className="mx-auto max-w-md rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-center text-sm text-rose-600">
+            {checkoutError}
+          </p>
+        )}
+      </div>
     </section>
   );
 }
