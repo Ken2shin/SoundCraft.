@@ -33,5 +33,9 @@ export default async function StudioPage({ params }) {
     redirect("/dashboard");
   }
 
-  return <Studio project={project} user={user} />;
+  // Serializar props para el boundary Server/Client
+  const serializedProject = project ? JSON.parse(JSON.stringify(project)) : null;
+  const serializedUser = user ? JSON.parse(JSON.stringify(user)) : null;
+
+  return <Studio project={serializedProject} user={serializedUser} />;
 }
