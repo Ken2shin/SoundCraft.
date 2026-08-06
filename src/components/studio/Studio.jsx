@@ -7,9 +7,20 @@ import AudioProcessor from "../audio/AudioProcessor";
 
 export default function Studio({ project, user }) {
   const router = useRouter();
-  const [title, setTitle] = useState(project.title);
+  const [title, setTitle] = useState(project?.title || "");
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState(null);
+
+  if (!project || !user) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-surface">
+        <div className="text-center">
+          <p className="text-stone-400">Cargando proyecto...</p>
+        </div>
+      </div>
+    );
+  }
+
   const plan = user?.plan === "pro" ? "pro" : user?.plan === "estudio" ? "estudio" : "free";
   const planLabel = plan === "pro" ? "Pro" : plan === "estudio" ? "Estudio" : "Free";
   const isPaid = plan === "pro" || plan === "estudio";
