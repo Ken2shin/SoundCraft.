@@ -16,13 +16,21 @@ export default async function StudioPage({ params }) {
   let user = null;
   try {
     user = await getUserByUid(session.uid);
+    console.log("[studio] user:", user?.id, user?.plan);
     project = user ? await getProjectByIdAndUser(id, user.id) : null;
+    console.log("[studio] project found:", !!project);
   } catch (err) {
-    console.error("[studio]", err.message);
+    console.error("[studio] error:", err.message);
   }
 
-  if (!user) redirect("/dashboard");
-  if (!project) notFound();
+  if (!user) {
+    console.log("[studio] no user, redirecting to dashboard");
+    redirect("/dashboard");
+  }
+  if (!project) {
+    console.log("[studio] project not found, id:", id, "user_id:", user?.id);
+    notFound();
+  }
 
   return <Studio project={project} user={user} />;
 }

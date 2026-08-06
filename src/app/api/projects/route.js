@@ -58,8 +58,10 @@ export async function POST(request) {
 
   try {
     const user = await ensureUser(session);
+    console.log("[api/projects] POST user:", user.id, user.plan);
     const n = await countProjects(user.id);
     const limit = projectLimitFor(user.plan);
+    console.log("[api/projects] count:", n, "limit:", limit, "plan:", user.plan);
     if (n >= limit) {
       const planName =
         user.plan === "estudio" ? "Estudio" : user.plan === "pro" ? "Pro" : "Free";
@@ -72,9 +74,10 @@ export async function POST(request) {
       );
     }
     const project = await createProject(user.id, { title, description });
+    console.log("[api/projects] created project:", project.id);
     return NextResponse.json({ project }, { status: 201 });
   } catch (err) {
-    console.error("[api/projects] POST", err.message);
+    console.error("[api/projects] POST error:", err.message);
     return NextResponse.json({ error: "Error de servidor" }, { status: 500 });
   }
 }
